@@ -1,0 +1,361 @@
+.root {
+  margin-top: 0.5rem;
+  width: 100%;
+  max-width: 40rem;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.spinnerWrap {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 1.25rem;
+}
+
+.successIconWrap {
+  margin-bottom: 1.25rem;
+}
+
+.spinner {
+  width: 3rem;
+  height: 3rem;
+  color: var(--rh-red);
+  animation: spin 0.9s linear infinite;
+}
+
+.successIcon {
+  width: 3.5rem;
+  height: 3.5rem;
+  color: #3e8635;
+  animation: successPop 0.45s ease-out;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes successPop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.successLead {
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.progressWrap {
+  width: 100%;
+  max-width: 26rem;
+  margin-top: 1.5rem;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+  align-self: center;
+}
+
+.statusRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.45rem;
+  min-width: 0;
+}
+
+.statusText {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #9a9ea3;
+}
+
+.percentText {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.progressTrack {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: #e4e4e4;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--rh-red);
+  transition: width 0.15s ease-out;
+}
+
+.artifactPanel {
+  margin-top: 1.75rem;
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  padding: 1.15rem 1.25rem 1.25rem;
+  border-radius: 10px;
+  background: #fafafa;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.artifactFilename {
+  margin: 0 0 0.95rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  word-break: break-all;
+}
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.42rem 0.95rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.badgeMuted {
+  background: #ececec;
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
+.badgeReady {
+  background: #e8f2e9;
+  border: 1px solid #3e8635;
+  color: #1e4d22;
+  font-weight: 600;
+}
+
+.downloadWrap {
+  margin-top: 1.75rem;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.downloadBtn {
+  padding: 0.7rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  background: var(--rh-red);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    filter 0.15s ease,
+    transform 0.15s ease;
+}
+
+.downloadBtn:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.downloadBtn:active {
+  transform: translateY(0);
+}
+
+.downloadBtn:focus-visible {
+  outline: 2px solid var(--rh-red);
+  outline-offset: 3px;
+}
+
+.postDownloadStack {
+  margin-top: 2rem;
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.plainCard {
+  margin: 0;
+  padding: 1.15rem 1.25rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fafafa;
+  text-align: left;
+}
+
+.instructionsTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.instructionsLead {
+  margin: 0 0 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.stepsList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.stepItem {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.stepNumber {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--rh-red);
+  line-height: 1;
+}
+
+.stepBodyWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.stepTitle {
+  margin: 0 0 0.3rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.stepBody {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.scriptCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.scriptCardTitle {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.copyBtn {
+  flex-shrink: 0;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.copyBtn:hover {
+  border-color: #b0b0b0;
+  background: #f5f5f5;
+}
+
+.copyBtn:focus-visible {
+  outline: 2px solid var(--rh-red);
+  outline-offset: 2px;
+}
+
+.copyBtnDone {
+  color: #1e4d22;
+  border-color: #3e8635;
+  background: #e8f2e9;
+}
+
+.scriptPre {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  background: #f0f0f0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  overflow-x: auto;
+  color: var(--ink);
+  white-space: pre;
+}
+
+.scriptPre code {
+  font-family: inherit;
+  font-size: inherit;
+}
