@@ -88,7 +88,7 @@ export default function App() {
         <div className={styles.brandMark}>
           <img
             className={styles.brandLogo}
-            src="/Logo-RedHat-A-Reverse-RGB.svg"
+            src={`${import.meta.env.BASE_URL}Logo-RedHat-A-Reverse-RGB.svg`}
             alt="Red Hat"
             width={613}
             height={145}
