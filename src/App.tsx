@@ -63,7 +63,7 @@ const steps: WizardStep[] = [
       },
       {
         icon: "policies",
-        title: "Opinionated Policies",
+        title: "Smart Defaults",
         description: "Preconfigured settings for cluster management, GPU, and storage.",
       },
     ],
@@ -627,11 +627,7 @@ function HighlightPfIcon({ id }: { id: HighlightIconId }) {
     case "bootstrap":
       return <BootstrapGlyph style={{ width: size, height: size }} />;
     case "disconnected":
-      return (
-        <DisconnectedGlyph
-          style={{ width: "1.9375rem", height: "1.9375rem" }}
-        />
-      );
+      return <DisconnectedGlyph style={{ width: size, height: size }} />;
     case "policies":
       return <ShieldGlyph style={{ width: size, height: size }} />;
     default:
