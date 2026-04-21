@@ -272,8 +272,14 @@ type Props = {
   showSubmitValidationErrors?: boolean;
 };
 
-function serviceNameSummaryLabel(flavorId: SovereignFlavorId): string {
-  return flavorId === "vm" ? "Service name" : "Cluster name";
+function serviceNameFieldLabelFor(flavorId: SovereignFlavorId): string {
+  if (flavorId === "vm") {
+    return "Service name";
+  }
+  if (flavorId === "baremetal") {
+    return "Deployment name";
+  }
+  return "Cluster name";
 }
 
 function FlavorConfigureReadOnlySummary({
@@ -321,7 +327,7 @@ function FlavorConfigureReadOnlySummary({
         </Title>
         <div className="trial-review-summary__rows">
           {row("Base domain", form.baseDomain || "—", true)}
-          {row(serviceNameSummaryLabel(flavorId), form.serviceName || "—", true)}
+          {row(serviceNameFieldLabelFor(flavorId), form.serviceName || "—", true)}
         </div>
       </section>
 
@@ -482,8 +488,7 @@ export function FlavorConfigureFields({
     );
   }
 
-  const serviceNameFieldLabel =
-    p === "vm" ? "Service name" : "Cluster name";
+  const serviceNameFieldLabel = serviceNameFieldLabelFor(p);
 
   return (
     <div className="trial-configure-summary__service-block">
