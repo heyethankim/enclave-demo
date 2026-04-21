@@ -40,25 +40,18 @@
   text-align: center;
 }
 
-.trial-wizard-logo-bleed .trial-wizard-logo-link {
+.trial-wizard-logo-bleed .trial-wizard-logo-wrap {
   display: inline-block;
   margin: 0;
   padding: 0.25rem 0.5rem;
   line-height: 0;
-  text-decoration: none;
   vertical-align: top;
   border-radius: 4px;
 }
 
-.trial-wizard-logo-bleed .trial-wizard-logo-link:focus-visible {
-  outline: 2px solid var(--trial-primary);
-  outline-offset: 2px;
-}
-
-.trial-wizard-logo-link {
+.trial-wizard-logo-wrap {
   display: inline-block;
   line-height: 0;
-  text-decoration: none;
   vertical-align: top;
 }
 

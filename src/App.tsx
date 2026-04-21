@@ -122,12 +122,7 @@ export default function App() {
     <div className="trial-page trial-wizard-app">
       <header className="trial-wizard-top" aria-label="Enclave">
         <div className="trial-wizard-logo-bleed">
-          <a
-            className="trial-wizard-logo-link"
-            href="https://www.redhat.com"
-            target="_blank"
-            rel="noreferrer"
-          >
+          <div className="trial-wizard-logo-wrap">
             <img
               className="trial-wizard-logo"
               src={`${import.meta.env.BASE_URL}enclave-header-logo.png`}
@@ -137,7 +132,7 @@ export default function App() {
               loading="eager"
               decoding="async"
             />
-          </a>
+          </div>
         </div>
         <div
           className="trial-wizard-top-divider"
