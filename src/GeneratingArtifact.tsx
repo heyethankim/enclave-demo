@@ -1,24 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
-  Card,
-  CardBody,
-  CardTitle,
   ClipboardCopy,
   ClipboardCopyVariant,
   Content,
+  Divider,
   Flex,
   Label,
-  List,
-  ListComponent,
-  ListItem,
-  OrderType,
   Progress,
   Stack,
   StackItem,
   Title,
 } from "@patternfly/react-core";
 import { CheckCircleIcon } from "@patternfly/react-icons";
+
+export const ARTIFACT_SUCCESS_TITLE = "Artifact generated successfully";
+export const ARTIFACT_SUCCESS_SUBTITLE =
+  "Your customized deployment artifact is ready for download.";
+
+export const ISO_ARTIFACT_NAME = "Enclave-Platform.iso";
 
 const DURATION_MS = 5000;
 
@@ -43,16 +43,18 @@ type Props = {
   subtitle: string;
   /** When the parent page header already shows the title, omit the in-flow headline (loading state). */
   omitPageTitle?: boolean;
+  /** Called once when progress reaches 100% (e.g. to update the wizard page title). */
+  onGenerationComplete?: () => void;
 };
 
 const INSTALL_STEPS = [
   {
     title: "Transfer the ISO",
-    body: "Copy enclave-vm-deployment.iso to your disconnected RHEL 9.x bastion host",
+    body: `Copy ${ISO_ARTIFACT_NAME} to your disconnected RHEL 9.x bastion host`,
   },
   {
     title: "Mount the ISO",
-    body: "Mount the ISO file to access the installation scripts and artifacts",
+    body: `Mount ${ISO_ARTIFACT_NAME} to access the installation scripts and artifacts`,
   },
   {
     title: "Run the installer",
@@ -60,7 +62,7 @@ const INSTALL_STEPS = [
   },
   {
     title: "Wait for completion",
-    body: "The automated process will take 45-90 minutes depending on hardware",
+    body: "The automated process will take 45–90 minutes depending on hardware",
   },
 ] as const;
 
@@ -73,7 +75,7 @@ function buildInstallScript(generatedAt: string): string {
 echo "Starting Enclave deployment..."
 
 # Mount the ISO
-mount -o loop enclave-vm-deployment.iso /mnt/enclave
+mount -o loop ${ISO_ARTIFACT_NAME} /mnt/enclave
 
 # Run the installer
 /mnt/enclave/install.sh \\
@@ -99,102 +101,112 @@ function ArtifactSuccessView() {
   );
 
   return (
-    <Stack hasGutter>
-      <StackItem>
-        <Flex justifyContent={{ default: "justifyContentCenter" }}>
-          <CheckCircleIcon
-            style={{
-              width: "3rem",
-              height: "3rem",
-              color: "var(--pf-t--global--icon--color--status--success--default)",
-            }}
-            aria-hidden
-          />
-        </Flex>
-      </StackItem>
-      <StackItem>
-        <Title headingLevel="h1" size="2xl" style={{ textAlign: "center" }}>
-          Artifact Generated Successfully
-        </Title>
-        <div style={{ marginTop: "var(--pf-t--global--spacer--md)", textAlign: "center" }}>
-          <Content component="p">
-            Your customized deployment artifact is ready for download
-          </Content>
+    <Stack hasGutter className="trial-artifact-success">
+      <StackItem className="trial-artifact-success__hero-item">
+        <div className="trial-artifact-success__hero">
+          <Flex
+            justifyContent={{ default: "justifyContentCenter" }}
+            className="trial-artifact-success__success-icon"
+          >
+            <CheckCircleIcon
+              style={{
+                width: "2rem",
+                height: "2rem",
+                color:
+                  "var(--pf-t--global--icon--color--status--success--default)",
+              }}
+              aria-hidden
+            />
+          </Flex>
+          <p className="trial-artifact-success__iso-name">{ISO_ARTIFACT_NAME}</p>
+          <Flex
+            className="trial-artifact-success__pills"
+            gap={{ default: "gapSm" }}
+            justifyContent={{ default: "justifyContentCenter" }}
+            flexWrap={{ default: "wrap" }}
+            role="group"
+            aria-label="Artifact type and size"
+          >
+            <Label color="grey" isCompact>
+              ISO Image
+            </Label>
+            <Label color="grey" isCompact>
+              ~18.4 GB
+            </Label>
+          </Flex>
+          <div className="trial-artifact-success__cta">
+            <Button variant="primary">Download ISO</Button>
+          </div>
         </div>
       </StackItem>
       <StackItem>
-        <Card isCompact>
-          <CardBody>
-            <Title headingLevel="h4" size="md" style={{ fontFamily: "var(--pf-t--global--font--family--mono)" }}>
-              enclave-vm-deployment.iso
-            </Title>
-            <Flex gap={{ default: "gapSm" }} style={{ marginTop: "var(--pf-t--global--spacer--sm)" }}>
-              <Label color="grey">ISO Image</Label>
-              <Label color="grey">~18.4 GB</Label>
-              <Label status="success">Ready</Label>
-            </Flex>
-          </CardBody>
-        </Card>
-      </StackItem>
-      <StackItem>
-        <Flex justifyContent={{ default: "justifyContentCenter" }}>
-          <Button variant="primary">Download ISO</Button>
-        </Flex>
-      </StackItem>
-      <StackItem>
-        <Card isCompact>
-          <CardBody>
-            <CardTitle component="h2">Installation Instructions</CardTitle>
-            <div style={{ marginTop: "var(--pf-t--global--spacer--sm)" }}>
-              <Content component="p">
-                Follow these steps to deploy on your disconnected RHEL bastion host
+        <Title headingLevel="h2" size="xl" style={{ margin: 0 }}>
+          Installation instructions
+        </Title>
+        <Content
+          component="p"
+          className="trial-artifact-success__intro"
+        >
+          Follow these steps to deploy on your disconnected RHEL bastion host.
+        </Content>
+        <ol className="trial-artifact-install-steps">
+          {INSTALL_STEPS.map((s) => (
+            <li key={s.title}>
+              <Title
+                headingLevel="h3"
+                size="md"
+                className="trial-artifact-install-steps__title"
+              >
+                {s.title}
+              </Title>
+              <Content component="p" className="trial-artifact-install-steps__body">
+                {s.body}
               </Content>
-            </div>
-            <List
-              component={ListComponent.ol}
-              type={OrderType.number}
-              style={{ marginTop: "var(--pf-t--global--spacer--md)" }}
-            >
-              {INSTALL_STEPS.map((s) => (
-                <ListItem key={s.title}>
-                  <Title headingLevel="h3" size="md">
-                    {s.title}
-                  </Title>
-                  <Content component="p">{s.body}</Content>
-                </ListItem>
-              ))}
-            </List>
-          </CardBody>
-        </Card>
+            </li>
+          ))}
+        </ol>
       </StackItem>
       <StackItem>
-        <Card isCompact>
-          <CardBody>
-            <CardTitle component="h2">Installation Script</CardTitle>
-            <ClipboardCopy
-              variant={ClipboardCopyVariant.expansion}
-              isExpanded
-              isCode
-              hoverTip="Copy"
-              clickTip="Copied!"
-              style={{ marginTop: "var(--pf-t--global--spacer--md)" }}
-            >
-              {script}
-            </ClipboardCopy>
-          </CardBody>
-        </Card>
+        <Divider />
+      </StackItem>
+      <StackItem>
+        <Title headingLevel="h2" size="xl" style={{ margin: 0 }}>
+          Installation script
+        </Title>
+        <ClipboardCopy
+          variant={ClipboardCopyVariant.expansion}
+          isExpanded
+          isCode
+          hoverTip="Copy"
+          clickTip="Copied!"
+          style={{ marginTop: "var(--pf-t--global--spacer--md)" }}
+        >
+          {script}
+        </ClipboardCopy>
       </StackItem>
     </Stack>
   );
 }
 
-export function GeneratingArtifact({ subtitle, omitPageTitle = false }: Props) {
+export function GeneratingArtifact({
+  subtitle,
+  omitPageTitle = false,
+  onGenerationComplete,
+}: Props) {
   const [percent, setPercent] = useState(1);
+  const reportedCompleteRef = useRef(false);
   const statusText = useMemo(
     () => statusMessageForPercent(percent),
     [percent],
   );
   const isComplete = percent >= 100;
+
+  useEffect(() => {
+    if (percent >= 100 && !reportedCompleteRef.current) {
+      reportedCompleteRef.current = true;
+      onGenerationComplete?.();
+    }
+  }, [percent, onGenerationComplete]);
 
   useEffect(() => {
     const start = performance.now();
@@ -241,6 +253,7 @@ export function GeneratingArtifact({ subtitle, omitPageTitle = false }: Props) {
           measureLocation="outside"
           valueText={`${percent}% — ${statusText}`}
           aria-label="Artifact generation progress"
+          variant="success"
         />
       </StackItem>
     </Stack>

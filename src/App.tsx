@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   Button,
   Card,
@@ -19,7 +19,12 @@ import {
   SovereignFlavorCards,
   type SovereignFlavorId,
 } from "./SovereignFlavorCards";
-import { GeneratingArtifact } from "./GeneratingArtifact";
+import { ConfigureDeployment } from "./ConfigureDeployment";
+import {
+  ARTIFACT_SUCCESS_SUBTITLE,
+  ARTIFACT_SUCCESS_TITLE,
+  GeneratingArtifact,
+} from "./GeneratingArtifact";
 
 type HighlightIconId = "bootstrap" | "disconnected" | "policies";
 
@@ -72,7 +77,7 @@ const steps: WizardStep[] = [
     id: "configure",
     stepperLabel: "Configure",
     title: "Configure your deployment",
-    body: "Answer a few questions—Enclave automatically selects the required operators and policies.",
+    body: "Answer a few questions—Enclave auto-selects required operators and policies.",
   },
   {
     id: "artifact",
@@ -89,7 +94,16 @@ export default function App() {
   const [selectedSovereignFlavors, setSelectedSovereignFlavors] = useState<
     Set<SovereignFlavorId>
   >(() => new Set(DEFAULT_SOVEREIGN_FLAVOR_SELECTION));
+  const [artifactGenerationComplete, setArtifactGenerationComplete] =
+    useState(false);
   const step = steps[index];
+
+  useEffect(() => {
+    if (step.id !== "artifact") {
+      setArtifactGenerationComplete(false);
+    }
+  }, [step.id]);
+
   const isLast = index === steps.length - 1;
 
   const isFlavorOrConfigureOrArtifact =
@@ -111,6 +125,14 @@ export default function App() {
     });
   };
   const pageSubtitle = step.subtitle ?? step.body;
+  const displayPageTitle =
+    step.id === "artifact" && artifactGenerationComplete
+      ? ARTIFACT_SUCCESS_TITLE
+      : step.title;
+  const displayPageSubtitle =
+    step.id === "artifact" && artifactGenerationComplete
+      ? ARTIFACT_SUCCESS_SUBTITLE
+      : pageSubtitle;
 
   const showSovereignSelectionSummary =
     step.id !== "welcome" && selectedSovereignFlavors.size > 0;
@@ -189,7 +211,7 @@ export default function App() {
                     .join(" ")}
                 >
                   <div className="trial-wizard-main-heading__primary">
-                    {step.title ? (
+                    {displayPageTitle ? (
                       <Title
                         headingLevel="h1"
                         size="2xl"
@@ -199,11 +221,11 @@ export default function App() {
                           color: "#151515",
                         }}
                       >
-                        {step.title}
+                        {displayPageTitle}
                       </Title>
                     ) : null}
-                    {pageSubtitle ? (
-                      <p className="trial-wizard-page-sub">{pageSubtitle}</p>
+                    {displayPageSubtitle ? (
+                      <p className="trial-wizard-page-sub">{displayPageSubtitle}</p>
                     ) : null}
                   </div>
                   {showSovereignSelectionSummary ? (
@@ -242,6 +264,9 @@ export default function App() {
                   <GeneratingArtifact
                     subtitle={step.body}
                     omitPageTitle
+                    onGenerationComplete={() =>
+                      setArtifactGenerationComplete(true)
+                    }
                   />
                 ) : null}
                 {step.id === "flavor" ? (
@@ -249,6 +274,9 @@ export default function App() {
                     selected={selectedSovereignFlavors}
                     onToggle={toggleSovereignFlavor}
                   />
+                ) : null}
+                {step.id === "configure" ? (
+                  <ConfigureDeployment selected={selectedSovereignFlavors} />
                 ) : null}
                 {step.id === "welcome" ? (
                   <>
@@ -378,20 +406,26 @@ export default function App() {
                   </Button>
                 </FlexItem>
                 <FlexItem>
-                  <Button
-                    variant="primary"
-                    aria-label="Next step"
-                    isDisabled={
-                      isLast ||
-                      (step.id === "flavor" &&
-                        selectedSovereignFlavors.size === 0)
-                    }
-                    onClick={() =>
-                      setIndex((i) => Math.min(steps.length - 1, i + 1))
-                    }
-                  >
-                    Next
-                  </Button>
+                  {step.id === "artifact" && artifactGenerationComplete ? (
+                    <Button variant="primary" aria-label="Download ISO">
+                      Download ISO
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      aria-label="Next step"
+                      isDisabled={
+                        isLast ||
+                        (step.id === "flavor" &&
+                          selectedSovereignFlavors.size === 0)
+                      }
+                      onClick={() =>
+                        setIndex((i) => Math.min(steps.length - 1, i + 1))
+                      }
+                    >
+                      Next
+                    </Button>
+                  )}
                 </FlexItem>
               </Flex>
             )}

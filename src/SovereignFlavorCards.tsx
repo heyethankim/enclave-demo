@@ -58,7 +58,7 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
       "GPU acceleration on demand",
       "Security and operations monitoring",
     ],
-    icon: <CubesFlavorIcon style={{ width: "2.5rem", height: "2.5rem" }} />,
+    icon: <CubesFlavorIcon />,
     listLabel: "VM as a Service includes",
   },
   {
@@ -72,7 +72,7 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
       "Persistent storage for stateful workloads",
       "Policy-based governance and access control",
     ],
-    icon: <ClusterFlavorIcon style={{ width: "2.5rem", height: "2.5rem" }} />,
+    icon: <ClusterFlavorIcon />,
     listLabel: "Cluster as a Service includes",
   },
   {
@@ -86,7 +86,7 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
       "Secure access and usage controls",
       "Monitoring and performance tracking",
     ],
-    icon: <AiFlavorIcon style={{ width: "2.5rem", height: "2.5rem" }} />,
+    icon: <AiFlavorIcon />,
     listLabel: "Model as a Service includes",
   },
   {
@@ -100,7 +100,7 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
       "Service discovery and internal networking",
       "Persistent storage for stateful applications",
     ],
-    icon: <BundleIcon style={{ width: "2.5rem", height: "2.5rem" }} />,
+    icon: <BundleIcon />,
     listLabel: "Container as a Service includes",
   },
   {
@@ -114,7 +114,7 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
       "Load balancing (layer 4 and layer 7)",
       "Firewall and security group management",
     ],
-    icon: <NetworkWiredIcon style={{ width: "2.5rem", height: "2.5rem" }} />,
+    icon: <NetworkWiredIcon />,
     listLabel: "Network as a Service includes",
   },
   {
@@ -128,18 +128,25 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
       "High-performance compute options",
       "Dedicated GPU and accelerator support",
     ],
-    icon: <EnterpriseIcon style={{ width: "2.5rem", height: "2.5rem" }} />,
+    icon: <EnterpriseIcon />,
     listLabel: "Bare Metal as a Service includes",
   },
 ];
 
 export function getSelectedSovereignFlavorsForSummary(
   selected: ReadonlySet<SovereignFlavorId>,
-): { id: SovereignFlavorId; chip: string; fullTitle: string }[] {
+): {
+  id: SovereignFlavorId;
+  chip: string;
+  fullTitle: string;
+  /** Same icon element as the flavor selection card for this service. */
+  icon: ReactNode;
+}[] {
   return FLAVOR_OPTIONS.filter((o) => selected.has(o.id)).map((o) => ({
     id: o.id,
     chip: FLAVOR_CHIP_LABEL[o.id],
     fullTitle: o.title,
+    icon: o.icon,
   }));
 }
 
