@@ -272,14 +272,20 @@ type Props = {
   showSubmitValidationErrors?: boolean;
 };
 
+function serviceNameSummaryLabel(flavorId: SovereignFlavorId): string {
+  return flavorId === "vm" ? "Service name" : "Cluster name";
+}
+
 function FlavorConfigureReadOnlySummary({
   form,
   layout,
   id,
+  flavorId,
 }: {
   form: FormState;
   layout: ConfigureLayout;
   id: (suffix: string) => string;
+  flavorId: SovereignFlavorId;
 }) {
   const row = (label: string, value: string, isRequired = false) => (
     <div key={label} className="trial-review-summary__row">
@@ -315,7 +321,7 @@ function FlavorConfigureReadOnlySummary({
         </Title>
         <div className="trial-review-summary__rows">
           {row("Base domain", form.baseDomain || "—", true)}
-          {row("Cluster name", form.serviceName || "—", true)}
+          {row(serviceNameSummaryLabel(flavorId), form.serviceName || "—", true)}
         </div>
       </section>
 
@@ -467,9 +473,17 @@ export function FlavorConfigureFields({
 
   if (readOnly) {
     return (
-      <FlavorConfigureReadOnlySummary form={form} layout={layout} id={id} />
+      <FlavorConfigureReadOnlySummary
+        form={form}
+        layout={layout}
+        id={id}
+        flavorId={p}
+      />
     );
   }
+
+  const serviceNameFieldLabel =
+    p === "vm" ? "Service name" : "Cluster name";
 
   return (
     <div className="trial-configure-summary__service-block">
@@ -507,7 +521,7 @@ export function FlavorConfigureFields({
             />
           </FormGroup>
           <FormGroup
-            label="Cluster name"
+            label={serviceNameFieldLabel}
             fieldId={id("service-name")}
             isRequired
           >
@@ -522,7 +536,7 @@ export function FlavorConfigureFields({
                   ? () => {}
                   : (_e, v) => onFormChange({ ...form, serviceName: v })
               }
-              aria-label="Cluster name"
+              aria-label={serviceNameFieldLabel}
             />
           </FormGroup>
         </div>
