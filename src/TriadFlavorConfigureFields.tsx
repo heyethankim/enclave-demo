@@ -239,6 +239,53 @@ export function initialFormState(flavorId: SovereignFlavorId): FormState {
   };
 }
 
+function serviceNameFieldLabelFor(flavorId: SovereignFlavorId): string {
+  if (flavorId === "vm") {
+    return "Service name";
+  }
+  if (flavorId === "baremetal") {
+    return "Deployment name";
+  }
+  return "Cluster name";
+}
+
+/** Collects user-facing validation messages for one flavor (required fields only). */
+export function validationMessagesForForm(
+  flavorId: SovereignFlavorId,
+  form: FormState,
+): string[] {
+  const messages: string[] = [];
+  const layout = configureLayoutFor(flavorId);
+  const nameLabel = serviceNameFieldLabelFor(flavorId);
+
+  if (form.baseDomain.trim() === "") {
+    messages.push("Enter a base domain.");
+  }
+  if (form.serviceName.trim() === "") {
+    messages.push(`Enter ${nameLabel.toLowerCase()}.`);
+  }
+
+  if (layout === "full") {
+    form.hosts.forEach((host, index) => {
+      const h = index + 1;
+      if (host.name.trim() === "") {
+        messages.push(`Host ${h}: Enter a name.`);
+      }
+      if (host.mac.trim() === "") {
+        messages.push(`Host ${h}: Enter a MAC address.`);
+      }
+      if (host.ip.trim() === "") {
+        messages.push(`Host ${h}: Enter the IP address.`);
+      }
+      if (host.rootDisk.trim() === "") {
+        messages.push(`Host ${h}: Enter a root disk path.`);
+      }
+    });
+  }
+
+  return messages;
+}
+
 /** Validates selected configure forms (e.g. before leaving the Configure step). */
 export function validateConfigureForms(
   selected: ReadonlySet<SovereignFlavorId>,
@@ -246,16 +293,8 @@ export function validateConfigureForms(
 ): ConfigureValidationIssue[] {
   const issues: ConfigureValidationIssue[] = [];
   for (const id of selected) {
-    if (id !== "cluster") {
-      continue;
-    }
     const form = forms[id] ?? initialFormState(id);
-    const messages: string[] = [];
-    form.hosts.forEach((host, index) => {
-      if (host.ip.trim() === "") {
-        messages.push(`Host ${index + 1}: Enter the IP address.`);
-      }
-    });
+    const messages = validationMessagesForForm(id, form);
     if (messages.length > 0) {
       issues.push({ flavorId: id, messages });
     }
@@ -271,16 +310,6 @@ type Props = {
   /** When true (after a failed “Next”), show inline errors for invalid fields. */
   showSubmitValidationErrors?: boolean;
 };
-
-function serviceNameFieldLabelFor(flavorId: SovereignFlavorId): string {
-  if (flavorId === "vm") {
-    return "Service name";
-  }
-  if (flavorId === "baremetal") {
-    return "Deployment name";
-  }
-  return "Cluster name";
-}
 
 function FlavorConfigureReadOnlySummary({
   form,
@@ -489,6 +518,12 @@ export function FlavorConfigureFields({
   }
 
   const serviceNameFieldLabel = serviceNameFieldLabelFor(p);
+  const baseDomainHelperId = id("base-domain-helper");
+  const serviceNameHelperId = id("service-name-helper");
+  const baseMissing = form.baseDomain.trim() === "";
+  const serviceMissing = form.serviceName.trim() === "";
+  const showBaseError = showSubmitValidationErrors && baseMissing;
+  const showServiceError = showSubmitValidationErrors && serviceMissing;
 
   return (
     <div className="trial-configure-summary__service-block">
@@ -511,38 +546,68 @@ export function FlavorConfigureFields({
             fieldId={id("base-domain")}
             isRequired
           >
-            <TextInput
-              id={id("base-domain")}
-              name={`${p}BaseDomain`}
-              value={form.baseDomain}
-              isRequired
-              {...readOnlyProps}
-              onChange={
-                readOnly
-                  ? () => {}
-                  : (_e, v) => onFormChange({ ...form, baseDomain: v })
-              }
-              aria-label="Base domain"
-            />
+            <Fragment>
+              <TextInput
+                id={id("base-domain")}
+                name={`${p}BaseDomain`}
+                value={form.baseDomain}
+                isRequired
+                validated={showBaseError ? "error" : "default"}
+                aria-invalid={showBaseError}
+                aria-describedby={
+                  showBaseError ? baseDomainHelperId : undefined
+                }
+                {...readOnlyProps}
+                onChange={
+                  readOnly
+                    ? () => {}
+                    : (_e, v) => onFormChange({ ...form, baseDomain: v })
+                }
+                aria-label="Base domain"
+              />
+              {showBaseError ? (
+                <FormHelperText
+                  id={baseDomainHelperId}
+                  className="trial-field-helper--error"
+                >
+                  Enter a base domain.
+                </FormHelperText>
+              ) : null}
+            </Fragment>
           </FormGroup>
           <FormGroup
             label={serviceNameFieldLabel}
             fieldId={id("service-name")}
             isRequired
           >
-            <TextInput
-              id={id("service-name")}
-              name={`${p}ServiceName`}
-              value={form.serviceName}
-              isRequired
-              {...readOnlyProps}
-              onChange={
-                readOnly
-                  ? () => {}
-                  : (_e, v) => onFormChange({ ...form, serviceName: v })
-              }
-              aria-label={serviceNameFieldLabel}
-            />
+            <Fragment>
+              <TextInput
+                id={id("service-name")}
+                name={`${p}ServiceName`}
+                value={form.serviceName}
+                isRequired
+                validated={showServiceError ? "error" : "default"}
+                aria-invalid={showServiceError}
+                aria-describedby={
+                  showServiceError ? serviceNameHelperId : undefined
+                }
+                {...readOnlyProps}
+                onChange={
+                  readOnly
+                    ? () => {}
+                    : (_e, v) => onFormChange({ ...form, serviceName: v })
+                }
+                aria-label={serviceNameFieldLabel}
+              />
+              {showServiceError ? (
+                <FormHelperText
+                  id={serviceNameHelperId}
+                  className="trial-field-helper--error"
+                >
+                  Enter {serviceNameFieldLabel.toLowerCase()}.
+                </FormHelperText>
+              ) : null}
+            </Fragment>
           </FormGroup>
         </div>
       </section>
@@ -636,11 +701,22 @@ export function FlavorConfigureFields({
             {form.hosts.map((host, index) => {
               const ipFieldId = `${id("host")}-${host.id}-ip`;
               const ipHelperId = `${ipFieldId}-helper`;
+              const nameFieldId = `${id("host")}-${host.id}-name`;
+              const nameHelperId = `${nameFieldId}-helper`;
+              const macFieldId = `${id("host")}-${host.id}-mac`;
+              const macHelperId = `${macFieldId}-helper`;
+              const rootFieldId = `${id("host")}-${host.id}-root`;
+              const rootHelperId = `${rootFieldId}-helper`;
+              const nameMissing = host.name.trim() === "";
+              const macMissing = host.mac.trim() === "";
               const ipMissing = host.ip.trim() === "";
-              const showIpError =
-                showSubmitValidationErrors &&
-                ipMissing &&
-                flavorId === "cluster";
+              const rootMissing = host.rootDisk.trim() === "";
+              const showNameError =
+                showSubmitValidationErrors && nameMissing;
+              const showMacError = showSubmitValidationErrors && macMissing;
+              const showIpError = showSubmitValidationErrors && ipMissing;
+              const showRootError =
+                showSubmitValidationErrors && rootMissing;
               return (
               <div key={host.id} className="trial-configure-summary__vm-host-card">
                 <Title
@@ -653,31 +729,61 @@ export function FlavorConfigureFields({
                 <div className="trial-configure-summary__vm-host-grid">
                   <FormGroup
                     label="Name"
-                    fieldId={`${id("host")}-${host.id}-name`}
+                    fieldId={nameFieldId}
                     isRequired
                   >
-                    <TextInput
-                      id={`${id("host")}-${host.id}-name`}
-                      value={host.name}
-                      isRequired
-                      {...readOnlyProps}
-                      onChange={(_e, v) => updateHost(host.id, { name: v })}
-                      aria-label={`Host ${index + 1} name`}
-                    />
+                    <Fragment>
+                      <TextInput
+                        id={nameFieldId}
+                        value={host.name}
+                        isRequired
+                        validated={showNameError ? "error" : "default"}
+                        aria-invalid={showNameError}
+                        aria-describedby={
+                          showNameError ? nameHelperId : undefined
+                        }
+                        {...readOnlyProps}
+                        onChange={(_e, v) => updateHost(host.id, { name: v })}
+                        aria-label={`Host ${index + 1} name`}
+                      />
+                      {showNameError ? (
+                        <FormHelperText
+                          id={nameHelperId}
+                          className="trial-field-helper--error"
+                        >
+                          Enter a host name.
+                        </FormHelperText>
+                      ) : null}
+                    </Fragment>
                   </FormGroup>
                   <FormGroup
                     label="MAC address"
-                    fieldId={`${id("host")}-${host.id}-mac`}
+                    fieldId={macFieldId}
                     isRequired
                   >
-                    <TextInput
-                      id={`${id("host")}-${host.id}-mac`}
-                      value={host.mac}
-                      isRequired
-                      {...readOnlyProps}
-                      onChange={(_e, v) => updateHost(host.id, { mac: v })}
-                      aria-label={`Host ${index + 1} MAC address`}
-                    />
+                    <Fragment>
+                      <TextInput
+                        id={macFieldId}
+                        value={host.mac}
+                        isRequired
+                        validated={showMacError ? "error" : "default"}
+                        aria-invalid={showMacError}
+                        aria-describedby={
+                          showMacError ? macHelperId : undefined
+                        }
+                        {...readOnlyProps}
+                        onChange={(_e, v) => updateHost(host.id, { mac: v })}
+                        aria-label={`Host ${index + 1} MAC address`}
+                      />
+                      {showMacError ? (
+                        <FormHelperText
+                          id={macHelperId}
+                          className="trial-field-helper--error"
+                        >
+                          Enter a MAC address.
+                        </FormHelperText>
+                      ) : null}
+                    </Fragment>
                   </FormGroup>
                   <FormGroup
                     label="IP address"
@@ -727,19 +833,34 @@ export function FlavorConfigureFields({
                   <div className="trial-configure-summary__vm-host-grid__full">
                     <FormGroup
                       label="Root disk"
-                      fieldId={`${id("host")}-${host.id}-root`}
+                      fieldId={rootFieldId}
                       isRequired
                     >
-                      <TextInput
-                        id={`${id("host")}-${host.id}-root`}
-                        value={host.rootDisk}
-                        isRequired
-                        {...readOnlyProps}
-                        onChange={(_e, v) =>
-                          updateHost(host.id, { rootDisk: v })
-                        }
-                        aria-label={`Host ${index + 1} root disk`}
-                      />
+                      <Fragment>
+                        <TextInput
+                          id={rootFieldId}
+                          value={host.rootDisk}
+                          isRequired
+                          validated={showRootError ? "error" : "default"}
+                          aria-invalid={showRootError}
+                          aria-describedby={
+                            showRootError ? rootHelperId : undefined
+                          }
+                          {...readOnlyProps}
+                          onChange={(_e, v) =>
+                            updateHost(host.id, { rootDisk: v })
+                          }
+                          aria-label={`Host ${index + 1} root disk`}
+                        />
+                        {showRootError ? (
+                          <FormHelperText
+                            id={rootHelperId}
+                            className="trial-field-helper--error"
+                          >
+                            Enter a root disk path.
+                          </FormHelperText>
+                        ) : null}
+                      </Fragment>
                     </FormGroup>
                   </div>
                   <FormGroup
