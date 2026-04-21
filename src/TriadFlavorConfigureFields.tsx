@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   Button,
   FormGroup,
@@ -232,13 +232,6 @@ type Props = {
   readOnly?: boolean;
 };
 
-function maskSecret(value: string): string {
-  if (!value) {
-    return "—";
-  }
-  return "•".repeat(Math.min(value.length, 24));
-}
-
 function FlavorConfigureReadOnlySummary({
   form,
   layout,
@@ -332,7 +325,7 @@ function FlavorConfigureReadOnlySummary({
                   {row("Redfish", host.redfish || "—")}
                   {row("Root disk", host.rootDisk || "—")}
                   {row("Redfish user", host.redfishUser || "—")}
-                  {row("Redfish password", maskSecret(host.redfishPassword))}
+                  {row("Redfish password", host.redfishPassword || "—")}
                 </div>
               </div>
             ))}
@@ -340,6 +333,44 @@ function FlavorConfigureReadOnlySummary({
         </section>
       ) : null}
     </div>
+  );
+}
+
+function EyeShowIcon() {
+  return (
+    <svg
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeHideIcon() {
+  return (
+    <svg
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
   );
 }
 
@@ -380,6 +411,10 @@ export function FlavorConfigureFields({
       hosts: [...form.hosts, makeRandomHost(triad, form.hosts.length + 1)],
     });
   }, [readOnly, layout, p, form, onFormChange]);
+
+  const [redfishPasswordVisible, setRedfishPasswordVisible] = useState<
+    Record<string, boolean>
+  >({});
 
   if (readOnly) {
     return (
@@ -614,16 +649,47 @@ export function FlavorConfigureFields({
                     label="Redfish password"
                     fieldId={`${id("host")}-${host.id}-rf-pass`}
                   >
-                    <TextInput
-                      id={`${id("host")}-${host.id}-rf-pass`}
-                      type="password"
-                      value={host.redfishPassword}
-                      {...readOnlyProps}
-                      onChange={(_e, v) =>
-                        updateHost(host.id, { redfishPassword: v })
-                      }
-                      aria-label={`Host ${index + 1} Redfish password`}
-                    />
+                    <div className="trial-password-input-group">
+                      <TextInput
+                        id={`${id("host")}-${host.id}-rf-pass`}
+                        className="trial-password-input-group__input"
+                        type={
+                          redfishPasswordVisible[host.id]
+                            ? "text"
+                            : "password"
+                        }
+                        value={host.redfishPassword}
+                        {...readOnlyProps}
+                        onChange={(_e, v) =>
+                          updateHost(host.id, { redfishPassword: v })
+                        }
+                        aria-label={`Host ${index + 1} Redfish password`}
+                      />
+                      <Button
+                        type="button"
+                        variant="plain"
+                        className="trial-password-input-group__toggle"
+                        aria-label={
+                          redfishPasswordVisible[host.id]
+                            ? `Hide host ${index + 1} Redfish password`
+                            : `Show host ${index + 1} Redfish password`
+                        }
+                        aria-pressed={Boolean(redfishPasswordVisible[host.id])}
+                        aria-controls={`${id("host")}-${host.id}-rf-pass`}
+                        onClick={() =>
+                          setRedfishPasswordVisible((prev) => ({
+                            ...prev,
+                            [host.id]: !prev[host.id],
+                          }))
+                        }
+                      >
+                        {redfishPasswordVisible[host.id] ? (
+                          <EyeHideIcon />
+                        ) : (
+                          <EyeShowIcon />
+                        )}
+                      </Button>
+                    </div>
                   </FormGroup>
                 </div>
               </div>

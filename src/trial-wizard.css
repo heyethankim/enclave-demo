@@ -812,6 +812,29 @@
   margin-bottom: 0;
 }
 
+.trial-password-input-group {
+  display: flex;
+  align-items: center;
+  gap: var(--pf-t--global--spacer--xs);
+  width: 100%;
+  min-width: 0;
+}
+
+.trial-password-input-group__input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.trial-password-input-group__toggle.pf-v6-c-button.pf-m-plain {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--pf-t--global--text--Color--200, #6a6e73);
+}
+
+.trial-password-input-group__toggle.pf-v6-c-button.pf-m-plain:hover {
+  color: var(--pf-t--global--text--Color--100, #151515);
+}
+
 .trial-configure-summary__service-block .pf-v6-c-form-control {
   --pf-v6-c-form-control--BackgroundColor: #f0f0f0;
   --pf-v6-c-form-control--before--BorderColor: transparent;
