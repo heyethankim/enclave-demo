@@ -809,10 +809,6 @@
   margin-bottom: 0;
 }
 
-.trial-configure-summary__vm-agent-actions {
-  margin-top: var(--pf-t--global--spacer--xl);
-}
-
 .trial-configure-summary__service-block .pf-v6-c-form-control {
   --pf-v6-c-form-control--BackgroundColor: #f0f0f0;
   --pf-v6-c-form-control--before--BorderColor: transparent;

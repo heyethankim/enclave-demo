@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   Button,
-  Flex,
-  FlexItem,
   FormGroup,
   TextInput,
   Title,
@@ -257,27 +255,6 @@ export function FlavorConfigureFields({ flavorId }: Props) {
     }));
   }, [layout, p]);
 
-  const renderActions = () => (
-    <div className="trial-configure-summary__vm-agent-actions">
-      <Flex
-        flexWrap={{ default: "wrap" }}
-        gap={{ default: "gapMd" }}
-        alignItems={{ default: "alignItemsCenter" }}
-      >
-        <FlexItem>
-          <Button variant="secondary" type="button">
-            Export YAML
-          </Button>
-        </FlexItem>
-        <FlexItem>
-          <Button variant="primary" type="button">
-            Deploy configuration
-          </Button>
-        </FlexItem>
-      </Flex>
-    </div>
-  );
-
   return (
     <div className="trial-configure-summary__service-block">
       <section
@@ -495,11 +472,8 @@ export function FlavorConfigureFields({ flavorId }: Props) {
               </div>
             ))}
           </div>
-          {renderActions()}
         </section>
-      ) : (
-        renderActions()
-      )}
+      ) : null}
     </div>
   );
 }
