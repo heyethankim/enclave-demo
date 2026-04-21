@@ -56,6 +56,7 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
       "Block storage (volumes and snapshots)",
       "Private networking (VPC)",
       "GPU acceleration on demand",
+      "Security and operations monitoring",
     ],
     icon: <CubesFlavorIcon style={{ width: "2.5rem", height: "2.5rem" }} />,
     listLabel: "VM as a Service includes",
