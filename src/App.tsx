@@ -183,15 +183,15 @@ export default function App() {
 
   return (
     <div className="trial-page trial-wizard-app">
-      <header className="trial-wizard-top" aria-label="Enclave">
+      <header className="trial-wizard-top" aria-label="Red Hat Enclave">
         <div className="trial-wizard-logo-bleed">
           <div className="trial-wizard-logo-wrap">
             <img
               className="trial-wizard-logo"
               src={`${import.meta.env.BASE_URL}enclave-header-logo.png`}
-              alt="Enclave by Red Hat"
-              width={400}
-              height={120}
+              alt="Red Hat Enclave"
+              width={1024}
+              height={307}
               loading="eager"
               decoding="async"
             />
