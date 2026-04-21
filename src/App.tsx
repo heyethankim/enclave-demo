@@ -79,7 +79,7 @@ const steps: WizardStep[] = [
     id: "configure",
     stepperLabel: "Configure",
     title: "Configure your deployment",
-    body: "Answer a few questions—Enclave auto-selects required operators and policies.",
+    body: "Answer a few questions to set up your chosen services.",
   },
   {
     id: "review",
