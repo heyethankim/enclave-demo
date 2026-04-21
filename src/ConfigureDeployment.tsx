@@ -9,13 +9,22 @@ import {
 } from "@patternfly/react-core";
 import { getSelectedSovereignFlavorsForSummary } from "./SovereignFlavorCards";
 import type { SovereignFlavorId } from "./SovereignFlavorCards";
-import { FlavorConfigureFields } from "./TriadFlavorConfigureFields";
+import type { FormState } from "./TriadFlavorConfigureFields";
+import { FlavorConfigureFields, initialFormState } from "./TriadFlavorConfigureFields";
 
 type Props = {
   selected: ReadonlySet<SovereignFlavorId>;
+  forms: Partial<Record<SovereignFlavorId, FormState>>;
+  onFormChange: (id: SovereignFlavorId, form: FormState) => void;
+  readOnly?: boolean;
 };
 
-export function ConfigureDeployment({ selected }: Props) {
+export function ConfigureDeployment({
+  selected,
+  forms,
+  onFormChange,
+  readOnly = false,
+}: Props) {
   const rows = getSelectedSovereignFlavorsForSummary(selected);
 
   if (rows.length === 0) {
@@ -30,7 +39,14 @@ export function ConfigureDeployment({ selected }: Props) {
   }
 
   return (
-    <div className="trial-configure-summary">
+    <div
+      className={[
+        "trial-configure-summary",
+        readOnly ? "trial-configure-summary--read-only" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <List
         component={ListComponent.ul}
         className="trial-configure-summary__list"
@@ -58,7 +74,12 @@ export function ConfigureDeployment({ selected }: Props) {
                 </Title>
               </div>
               <div className="trial-configure-summary__service-addon">
-                <FlavorConfigureFields flavorId={id} />
+                <FlavorConfigureFields
+                  flavorId={id}
+                  form={forms[id] ?? initialFormState(id)}
+                  onFormChange={(form) => onFormChange(id, form)}
+                  readOnly={readOnly}
+                />
               </div>
             </div>
           </ListItem>

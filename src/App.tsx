@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   Button,
   Card,
@@ -20,6 +20,8 @@ import {
   type SovereignFlavorId,
 } from "./SovereignFlavorCards";
 import { ConfigureDeployment } from "./ConfigureDeployment";
+import type { FormState } from "./TriadFlavorConfigureFields";
+import { initialFormState } from "./TriadFlavorConfigureFields";
 import {
   ARTIFACT_SUCCESS_SUBTITLE,
   ARTIFACT_SUCCESS_TITLE,
@@ -69,7 +71,7 @@ const steps: WizardStep[] = [
   },
   {
     id: "flavor",
-    stepperLabel: "Flavor",
+    stepperLabel: "Select",
     title: "Select your sovereign cloud setup",
     body: "Choose use cases—configuration adjusts automatically.",
   },
@@ -80,14 +82,31 @@ const steps: WizardStep[] = [
     body: "Answer a few questions—Enclave auto-selects required operators and policies.",
   },
   {
+    id: "review",
+    stepperLabel: "Review",
+    title: "Review your deployment",
+    body: "Confirm selections. Use Back to edit.",
+  },
+  {
     id: "artifact",
-    stepperLabel: "Artifact",
+    stepperLabel: "Generate",
     title: "Generating your deployment artifact",
     body: "This may take a few minutes while we bundle your disconnected deployment.",
   },
 ];
 
 const TRIAL_BLUE = "#0066cc";
+
+function buildFormsForSelected(
+  selected: ReadonlySet<SovereignFlavorId>,
+  prev: Partial<Record<SovereignFlavorId, FormState>>,
+): Partial<Record<SovereignFlavorId, FormState>> {
+  const next: Partial<Record<SovereignFlavorId, FormState>> = {};
+  for (const id of selected) {
+    next[id] = prev[id] ?? initialFormState(id);
+  }
+  return next;
+}
 
 export default function App() {
   const [index, setIndex] = useState(0);
@@ -96,7 +115,28 @@ export default function App() {
   >(() => new Set(DEFAULT_SOVEREIGN_FLAVOR_SELECTION));
   const [artifactGenerationComplete, setArtifactGenerationComplete] =
     useState(false);
+  const [configureForms, setConfigureForms] = useState<
+    Partial<Record<SovereignFlavorId, FormState>>
+  >(() =>
+    buildFormsForSelected(
+      new Set(DEFAULT_SOVEREIGN_FLAVOR_SELECTION),
+      {},
+    ),
+  );
   const step = steps[index];
+
+  useEffect(() => {
+    setConfigureForms((prev) =>
+      buildFormsForSelected(selectedSovereignFlavors, prev),
+    );
+  }, [selectedSovereignFlavors]);
+
+  const handleConfigureFormChange = useCallback(
+    (id: SovereignFlavorId, form: FormState) => {
+      setConfigureForms((prev) => ({ ...prev, [id]: form }));
+    },
+    [],
+  );
 
   useEffect(() => {
     if (step.id !== "artifact") {
@@ -109,6 +149,7 @@ export default function App() {
   const isFlavorOrConfigureOrArtifact =
     step.id === "flavor" ||
     step.id === "configure" ||
+    step.id === "review" ||
     step.id === "artifact";
 
   const goBack = () => setIndex((i) => Math.max(0, i - 1));
@@ -189,9 +230,7 @@ export default function App() {
           >
             <CardBody
               style={{
-                textAlign: isFlavorOrConfigureOrArtifact || step.id === "artifact"
-                  ? "start"
-                  : "center",
+                textAlign: isFlavorOrConfigureOrArtifact ? "start" : "center",
                 padding:
                   step.id === "welcome"
                     ? "2.75rem 1.75rem 2rem"
@@ -276,7 +315,19 @@ export default function App() {
                   />
                 ) : null}
                 {step.id === "configure" ? (
-                  <ConfigureDeployment selected={selectedSovereignFlavors} />
+                  <ConfigureDeployment
+                    selected={selectedSovereignFlavors}
+                    forms={configureForms}
+                    onFormChange={handleConfigureFormChange}
+                  />
+                ) : null}
+                {step.id === "review" ? (
+                  <ConfigureDeployment
+                    selected={selectedSovereignFlavors}
+                    forms={configureForms}
+                    onFormChange={handleConfigureFormChange}
+                    readOnly
+                  />
                 ) : null}
                 {step.id === "welcome" ? (
                   <>

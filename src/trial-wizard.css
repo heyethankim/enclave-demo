@@ -693,6 +693,9 @@
   width: 100%;
   max-width: none;
   margin-top: var(--pf-t--global--spacer--md);
+  /* Nest Basic / Network / Agent hosts under the service title; vertical rail per service */
+  padding-inline-start: clamp(1.25rem, 1.5rem + 1.25vw, 2.25rem);
+  border-inline-start: 1px solid color-mix(in srgb, var(--trial-border) 80%, transparent);
 }
 
 .trial-configure-summary__service-addon .trial-configure-summary__service-block {
@@ -813,6 +816,70 @@
   --pf-v6-c-form-control--BackgroundColor: #f0f0f0;
   --pf-v6-c-form-control--before--BorderColor: transparent;
   width: 100%;
+}
+
+/* Review step: scan-friendly label / value pairs (no inputs) */
+.trial-review-summary {
+  width: 100%;
+}
+
+.trial-review-summary__section {
+  margin-top: var(--pf-t--global--spacer--xl);
+}
+
+.trial-review-summary__section:first-child {
+  margin-top: 0;
+}
+
+.trial-review-summary__section-title.pf-v6-c-title {
+  margin: 0 0 var(--pf-t--global--spacer--sm);
+}
+
+.trial-review-summary__rows {
+  display: grid;
+  grid-template-columns: minmax(0, min(11rem, 32%)) minmax(0, 1fr);
+  column-gap: var(--pf-t--global--spacer--lg);
+  row-gap: var(--pf-t--global--spacer--sm);
+  align-items: baseline;
+}
+
+.trial-review-summary__row {
+  display: contents;
+}
+
+.trial-review-summary__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--trial-muted, #737373);
+  padding-right: var(--pf-t--global--spacer--sm);
+}
+
+.trial-review-summary__value {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--trial-ink, #151515);
+  word-break: break-word;
+  font-family: var(--pf-t--global--font--family--mono);
+}
+
+.trial-review-summary__hosts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pf-t--global--spacer--lg);
+}
+
+.trial-review-summary__host-block {
+  padding-top: var(--pf-t--global--spacer--md);
+  border-top: 1px solid color-mix(in srgb, var(--trial-border) 65%, transparent);
+}
+
+.trial-review-summary__host-block:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.trial-review-summary__host-title.pf-v6-c-title {
+  margin: 0 0 var(--pf-t--global--spacer--sm);
 }
 
 .trial-artifact-success {

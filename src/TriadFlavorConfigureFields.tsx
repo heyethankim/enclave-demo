@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback } from "react";
 import {
   Button,
   FormGroup,
@@ -11,7 +11,7 @@ export type TriadFlavorId = "vm" | "cluster" | "baremetal";
 
 type ConfigureLayout = "full" | "basicNetwork" | "basic";
 
-type AgentHost = {
+export type AgentHost = {
   id: string;
   name: string;
   mac: string;
@@ -22,7 +22,7 @@ type AgentHost = {
   redfishPassword: string;
 };
 
-type FormState = {
+export type FormState = {
   baseDomain: string;
   serviceName: string;
   apiVip: string;
@@ -204,7 +204,7 @@ function initialSoloBasic(
   };
 }
 
-function initialFormState(flavorId: SovereignFlavorId): FormState {
+export function initialFormState(flavorId: SovereignFlavorId): FormState {
   const mode = configureLayoutFor(flavorId);
   if (mode === "full") {
     return initialTriadFormState(flavorId as TriadFlavorId);
@@ -225,35 +225,167 @@ function initialFormState(flavorId: SovereignFlavorId): FormState {
   };
 }
 
-type Props = { flavorId: SovereignFlavorId };
+type Props = {
+  flavorId: SovereignFlavorId;
+  form: FormState;
+  onFormChange: (next: FormState) => void;
+  readOnly?: boolean;
+};
 
-export function FlavorConfigureFields({ flavorId }: Props) {
+function maskSecret(value: string): string {
+  if (!value) {
+    return "—";
+  }
+  return "•".repeat(Math.min(value.length, 24));
+}
+
+function FlavorConfigureReadOnlySummary({
+  form,
+  layout,
+  id,
+}: {
+  form: FormState;
+  layout: ConfigureLayout;
+  id: (suffix: string) => string;
+}) {
+  const row = (label: string, value: string) => (
+    <div key={label} className="trial-review-summary__row">
+      <span className="trial-review-summary__label">{label}</span>
+      <span className="trial-review-summary__value">{value}</span>
+    </div>
+  );
+
+  return (
+    <div
+      className="trial-configure-summary__service-block trial-review-summary"
+      aria-readonly="true"
+    >
+      <section
+        className="trial-review-summary__section"
+        aria-labelledby={id("basic-heading")}
+      >
+        <Title
+          id={id("basic-heading")}
+          headingLevel="h4"
+          size="lg"
+          className="trial-review-summary__section-title trial-configure-summary__subsection-title"
+        >
+          Basic
+        </Title>
+        <div className="trial-review-summary__rows">
+          {row("Base domain", form.baseDomain || "—")}
+          {row("Service name", form.serviceName || "—")}
+        </div>
+      </section>
+
+      {layout === "full" || layout === "basicNetwork" ? (
+        <section
+          className="trial-review-summary__section"
+          aria-labelledby={id("network-heading")}
+        >
+          <Title
+            id={id("network-heading")}
+            headingLevel="h4"
+            size="lg"
+            className="trial-review-summary__section-title trial-configure-summary__subsection-title"
+          >
+            Network
+          </Title>
+          <div className="trial-review-summary__rows">
+            {row("API VIP", form.apiVip || "—")}
+            {row("Ingress VIP", form.ingressVip || "—")}
+            {row("Machine network", form.machineNetwork || "—")}
+          </div>
+        </section>
+      ) : null}
+
+      {layout === "full" ? (
+        <section
+          className="trial-review-summary__section"
+          aria-labelledby={id("agent-hosts-heading")}
+        >
+          <Title
+            id={id("agent-hosts-heading")}
+            headingLevel="h4"
+            size="lg"
+            className="trial-review-summary__section-title trial-configure-summary__subsection-title"
+          >
+            Agent hosts
+          </Title>
+          <div className="trial-review-summary__hosts">
+            {form.hosts.map((host, index) => (
+              <div
+                key={host.id}
+                className="trial-review-summary__host-block"
+              >
+                <Title
+                  headingLevel="h5"
+                  size="md"
+                  className="trial-review-summary__host-title trial-configure-summary__vm-host-heading"
+                >
+                  Host {index + 1}
+                </Title>
+                <div className="trial-review-summary__rows">
+                  {row("Name", host.name || "—")}
+                  {row("MAC address", host.mac || "—")}
+                  {row("IP address", host.ip || "—")}
+                  {row("Redfish", host.redfish || "—")}
+                  {row("Root disk", host.rootDisk || "—")}
+                  {row("Redfish user", host.redfishUser || "—")}
+                  {row("Redfish password", maskSecret(host.redfishPassword))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+export function FlavorConfigureFields({
+  flavorId,
+  form,
+  onFormChange,
+  readOnly = false,
+}: Props) {
   const layout = configureLayoutFor(flavorId);
   const p = flavorId;
   const id = (suffix: string) => `trial-cfg-${p}-${suffix}`;
 
-  const seed = useMemo(() => initialFormState(flavorId), [flavorId]);
-  const [form, setForm] = useState<FormState>(seed);
+  const readOnlyProps = readOnly ? { readOnlyVariant: "default" as const } : {};
 
-  const updateHost = useCallback((hostId: string, patch: Partial<AgentHost>) => {
-    setForm((prev) => ({
-      ...prev,
-      hosts: prev.hosts.map((h) =>
-        h.id === hostId ? { ...h, ...patch } : h,
-      ),
-    }));
-  }, []);
+  const updateHost = useCallback(
+    (hostId: string, patch: Partial<AgentHost>) => {
+      if (readOnly) {
+        return;
+      }
+      onFormChange({
+        ...form,
+        hosts: form.hosts.map((h) =>
+          h.id === hostId ? { ...h, ...patch } : h,
+        ),
+      });
+    },
+    [readOnly, form, onFormChange],
+  );
 
   const addHost = useCallback(() => {
-    if (layout !== "full") {
+    if (readOnly || layout !== "full") {
       return;
     }
     const triad = p as TriadFlavorId;
-    setForm((prev) => ({
-      ...prev,
-      hosts: [...prev.hosts, makeRandomHost(triad, prev.hosts.length + 1)],
-    }));
-  }, [layout, p]);
+    onFormChange({
+      ...form,
+      hosts: [...form.hosts, makeRandomHost(triad, form.hosts.length + 1)],
+    });
+  }, [readOnly, layout, p, form, onFormChange]);
+
+  if (readOnly) {
+    return (
+      <FlavorConfigureReadOnlySummary form={form} layout={layout} id={id} />
+    );
+  }
 
   return (
     <div className="trial-configure-summary__service-block">
@@ -276,8 +408,11 @@ export function FlavorConfigureFields({ flavorId }: Props) {
               id={id("base-domain")}
               name={`${p}BaseDomain`}
               value={form.baseDomain}
-              onChange={(_e, v) =>
-                setForm((prev) => ({ ...prev, baseDomain: v }))
+              {...readOnlyProps}
+              onChange={
+                readOnly
+                  ? () => {}
+                  : (_e, v) => onFormChange({ ...form, baseDomain: v })
               }
               aria-label="Base domain"
             />
@@ -287,8 +422,11 @@ export function FlavorConfigureFields({ flavorId }: Props) {
               id={id("service-name")}
               name={`${p}ServiceName`}
               value={form.serviceName}
-              onChange={(_e, v) =>
-                setForm((prev) => ({ ...prev, serviceName: v }))
+              {...readOnlyProps}
+              onChange={
+                readOnly
+                  ? () => {}
+                  : (_e, v) => onFormChange({ ...form, serviceName: v })
               }
               aria-label="Service name"
             />
@@ -316,8 +454,11 @@ export function FlavorConfigureFields({ flavorId }: Props) {
                 id={id("api-vip")}
                 name={`${p}ApiVip`}
                 value={form.apiVip}
-                onChange={(_e, v) =>
-                  setForm((prev) => ({ ...prev, apiVip: v }))
+                {...readOnlyProps}
+                onChange={
+                  readOnly
+                    ? () => {}
+                    : (_e, v) => onFormChange({ ...form, apiVip: v })
                 }
                 aria-label="API VIP"
               />
@@ -327,8 +468,11 @@ export function FlavorConfigureFields({ flavorId }: Props) {
                 id={id("ingress-vip")}
                 name={`${p}IngressVip`}
                 value={form.ingressVip}
-                onChange={(_e, v) =>
-                  setForm((prev) => ({ ...prev, ingressVip: v }))
+                {...readOnlyProps}
+                onChange={
+                  readOnly
+                    ? () => {}
+                    : (_e, v) => onFormChange({ ...form, ingressVip: v })
                 }
                 aria-label="Ingress VIP"
               />
@@ -339,8 +483,12 @@ export function FlavorConfigureFields({ flavorId }: Props) {
                   id={id("machine-network")}
                   name={`${p}MachineNetwork`}
                   value={form.machineNetwork}
-                  onChange={(_e, v) =>
-                    setForm((prev) => ({ ...prev, machineNetwork: v }))
+                  {...readOnlyProps}
+                  onChange={
+                    readOnly
+                      ? () => {}
+                      : (_e, v) =>
+                          onFormChange({ ...form, machineNetwork: v })
                   }
                   aria-label="Machine network"
                 />
@@ -365,9 +513,11 @@ export function FlavorConfigureFields({ flavorId }: Props) {
             >
               Agent hosts
             </Title>
-            <Button variant="secondary" type="button" onClick={addHost}>
-              Add host
-            </Button>
+            {!readOnly ? (
+              <Button variant="secondary" type="button" onClick={addHost}>
+                Add host
+              </Button>
+            ) : null}
           </div>
           <div className="trial-configure-summary__vm-agent-hosts">
             {form.hosts.map((host, index) => (
@@ -387,6 +537,7 @@ export function FlavorConfigureFields({ flavorId }: Props) {
                     <TextInput
                       id={`${id("host")}-${host.id}-name`}
                       value={host.name}
+                      {...readOnlyProps}
                       onChange={(_e, v) => updateHost(host.id, { name: v })}
                       aria-label={`Host ${index + 1} name`}
                     />
@@ -398,6 +549,7 @@ export function FlavorConfigureFields({ flavorId }: Props) {
                     <TextInput
                       id={`${id("host")}-${host.id}-mac`}
                       value={host.mac}
+                      {...readOnlyProps}
                       onChange={(_e, v) => updateHost(host.id, { mac: v })}
                       aria-label={`Host ${index + 1} MAC address`}
                     />
@@ -409,6 +561,7 @@ export function FlavorConfigureFields({ flavorId }: Props) {
                     <TextInput
                       id={`${id("host")}-${host.id}-ip`}
                       value={host.ip}
+                      {...readOnlyProps}
                       onChange={(_e, v) => updateHost(host.id, { ip: v })}
                       aria-label={`Host ${index + 1} IP address`}
                     />
@@ -420,6 +573,7 @@ export function FlavorConfigureFields({ flavorId }: Props) {
                     <TextInput
                       id={`${id("host")}-${host.id}-redfish`}
                       value={host.redfish}
+                      {...readOnlyProps}
                       onChange={(_e, v) =>
                         updateHost(host.id, { redfish: v })
                       }
@@ -434,6 +588,7 @@ export function FlavorConfigureFields({ flavorId }: Props) {
                       <TextInput
                         id={`${id("host")}-${host.id}-root`}
                         value={host.rootDisk}
+                        {...readOnlyProps}
                         onChange={(_e, v) =>
                           updateHost(host.id, { rootDisk: v })
                         }
@@ -448,6 +603,7 @@ export function FlavorConfigureFields({ flavorId }: Props) {
                     <TextInput
                       id={`${id("host")}-${host.id}-rf-user`}
                       value={host.redfishUser}
+                      {...readOnlyProps}
                       onChange={(_e, v) =>
                         updateHost(host.id, { redfishUser: v })
                       }
@@ -462,6 +618,7 @@ export function FlavorConfigureFields({ flavorId }: Props) {
                       id={`${id("host")}-${host.id}-rf-pass`}
                       type="password"
                       value={host.redfishPassword}
+                      {...readOnlyProps}
                       onChange={(_e, v) =>
                         updateHost(host.id, { redfishPassword: v })
                       }
