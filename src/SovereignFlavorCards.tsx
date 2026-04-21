@@ -103,20 +103,6 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
     listLabel: "Container as a Service includes",
   },
   {
-    id: "baremetal",
-    title: "Bare Metal as a Service",
-    lead: "On-demand physical servers with full hardware access, performance control, and automated provisioning.",
-    includes: [
-      "Automated server provisioning and deprovisioning",
-      "Full hardware-level access (no virtualization layer)",
-      "Custom OS installation and image management",
-      "High-performance compute options",
-      "Dedicated GPU and accelerator support",
-    ],
-    icon: <EnterpriseIcon style={{ width: "2.5rem", height: "2.5rem" }} />,
-    listLabel: "Bare Metal as a Service includes",
-  },
-  {
     id: "network",
     title: "Network as a Service",
     lead: "On-demand software-defined networking for connecting, isolating, and securing workloads across environments.",
@@ -129,6 +115,20 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
     ],
     icon: <NetworkWiredIcon style={{ width: "2.5rem", height: "2.5rem" }} />,
     listLabel: "Network as a Service includes",
+  },
+  {
+    id: "baremetal",
+    title: "Bare Metal as a Service",
+    lead: "On-demand physical servers with full hardware access, performance control, and automated provisioning.",
+    includes: [
+      "Automated server provisioning and deprovisioning",
+      "Full hardware-level access (no virtualization layer)",
+      "Custom OS installation and image management",
+      "High-performance compute options",
+      "Dedicated GPU and accelerator support",
+    ],
+    icon: <EnterpriseIcon style={{ width: "2.5rem", height: "2.5rem" }} />,
+    listLabel: "Bare Metal as a Service includes",
   },
 ];
 
