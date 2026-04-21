@@ -6,7 +6,6 @@ import {
   Content,
   Divider,
   Flex,
-  Label,
   Progress,
   Stack,
   StackItem,
@@ -127,12 +126,8 @@ function ArtifactSuccessView() {
             role="group"
             aria-label="Artifact type and size"
           >
-            <Label color="grey" isCompact>
-              ISO Image
-            </Label>
-            <Label color="grey" isCompact>
-              ~18.4 GB
-            </Label>
+            <span className="trial-artifact-success__pill">ISO Image</span>
+            <span className="trial-artifact-success__pill">~18.4 GB</span>
           </Flex>
           <div className="trial-artifact-success__cta">
             <Button variant="primary" size="lg" aria-label="Download ISO">

@@ -1023,6 +1023,26 @@
   row-gap: var(--pf-t--global--spacer--sm);
 }
 
+/* White pills in the download hero (replacing dark grey PatternFly labels) */
+.trial-artifact-success__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 1.375rem;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--trial-border, #d0d0d0) 92%, #000);
+  color: var(--trial-ink, #151515);
+  font-size: var(--pf-t--global--font--size--body--sm, 0.75rem);
+  font-weight: 500;
+  line-height: 1.25;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
 .trial-artifact-success__cta {
   margin-top: var(--pf-t--global--spacer--md);
   display: flex;
