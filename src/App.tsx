@@ -54,7 +54,7 @@ const steps: WizardStep[] = [
       {
         icon: "bootstrap",
         title: "Automated Bootstrap",
-        description: "Quay mirroring and bare-metal installation, fully automated.",
+        description: "Image distribution and infrastructure setup, fully automated.",
       },
       {
         icon: "disconnected",
