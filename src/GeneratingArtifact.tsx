@@ -1,8 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
-import appStyles from "./App.module.css";
-import styles from "./GeneratingArtifact.module.css";
+import {
+  Button,
+  Card,
+  CardBody,
+  CardTitle,
+  ClipboardCopy,
+  ClipboardCopyVariant,
+  Content,
+  Flex,
+  Label,
+  List,
+  ListComponent,
+  ListItem,
+  OrderType,
+  Progress,
+  Stack,
+  StackItem,
+  Title,
+} from "@patternfly/react-core";
+import { CheckCircleIcon } from "@patternfly/react-icons";
 
-const DURATION_MS = 14000;
+const DURATION_MS = 5000;
 
 const STATUS_MESSAGES = [
   "Initializing build environment...",
@@ -23,34 +41,9 @@ function statusMessageForPercent(p: number): string {
 
 type Props = {
   subtitle: string;
+  /** When the parent page header already shows the title, omit the in-flow headline (loading state). */
+  omitPageTitle?: boolean;
 };
-
-function SpinnerIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 48 48"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <circle
-        cx="24"
-        cy="24"
-        r="20"
-        stroke="currentColor"
-        strokeOpacity="0.2"
-        strokeWidth="4"
-      />
-      <path
-        d="M44 24c0-11-9-20-20-20"
-        stroke="currentColor"
-        strokeWidth="4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 const INSTALL_STEPS = [
   {
@@ -84,32 +77,11 @@ mount -o loop enclave-vm-deployment.iso /mnt/enclave
 
 # Run the installer
 /mnt/enclave/install.sh \\
-  --flavor vm \\
+  --flavor cluster \\
   --storage ceph \\
   --network isolated
 
 echo "Deployment complete!"`;
-}
-
-function SuccessCheckIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 48 48"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="3" />
-      <path
-        d="M15 24.5l6 6 12-14"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 function ArtifactSuccessView() {
@@ -119,118 +91,108 @@ function ArtifactSuccessView() {
         dateStyle: "short",
         timeStyle: "medium",
       }),
-    []
+    [],
   );
   const script = useMemo(
     () => buildInstallScript(generatedAt),
-    [generatedAt]
+    [generatedAt],
   );
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopyScript() {
-    try {
-      await navigator.clipboard.writeText(script);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  }
 
   return (
-    <div className={styles.root} aria-busy="false">
-      <div className={`${styles.spinnerWrap} ${styles.successIconWrap}`}>
-        <SuccessCheckIcon className={styles.successIcon} />
-      </div>
-      <h1 className={`${appStyles.title} ${appStyles.titleStep}`}>
-        Artifact Generated Successfully!
-      </h1>
-      <p className={`${appStyles.lead} ${appStyles.leadStep} ${styles.successLead}`}>
-        Your customized deployment artifact is ready for download
-      </p>
-
-      <div className={styles.artifactPanel}>
-        <p className={styles.artifactFilename}>enclave-vm-deployment.iso</p>
-        <div className={styles.badgeRow}>
-          <span className={`${styles.badge} ${styles.badgeMuted}`}>
-            ISO Image
-          </span>
-          <span className={`${styles.badge} ${styles.badgeMuted}`}>
-            ~18.4 GB
-          </span>
-          <span className={`${styles.badge} ${styles.badgeReady}`}>
-            Ready
-          </span>
+    <Stack hasGutter>
+      <StackItem>
+        <Flex justifyContent={{ default: "justifyContentCenter" }}>
+          <CheckCircleIcon
+            style={{
+              width: "3rem",
+              height: "3rem",
+              color: "var(--pf-t--global--icon--color--status--success--default)",
+            }}
+            aria-hidden
+          />
+        </Flex>
+      </StackItem>
+      <StackItem>
+        <Title headingLevel="h1" size="2xl" style={{ textAlign: "center" }}>
+          Artifact Generated Successfully
+        </Title>
+        <div style={{ marginTop: "var(--pf-t--global--spacer--md)", textAlign: "center" }}>
+          <Content component="p">
+            Your customized deployment artifact is ready for download
+          </Content>
         </div>
-      </div>
-
-      <div className={styles.downloadWrap}>
-        <button type="button" className={styles.downloadBtn}>
-          Download ISO
-        </button>
-      </div>
-
-      <div className={styles.postDownloadStack}>
-        <section
-          className={styles.plainCard}
-          aria-labelledby="install-instructions-title"
-        >
-          <h2
-            id="install-instructions-title"
-            className={styles.instructionsTitle}
-          >
-            Installation Instructions
-          </h2>
-          <p className={styles.instructionsLead}>
-            Follow these steps to deploy on your disconnected RHEL bastion host
-          </p>
-          <ol className={styles.stepsList}>
-            {INSTALL_STEPS.map((step, i) => (
-              <li key={step.title} className={styles.stepItem}>
-                <span className={styles.stepNumber}>{i + 1}</span>
-                <div className={styles.stepBodyWrap}>
-                  <h3 className={styles.stepTitle}>{step.title}</h3>
-                  <p className={styles.stepBody}>{step.body}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section
-          className={styles.plainCard}
-          aria-labelledby="install-script-title"
-        >
-          <div className={styles.scriptCardHeader}>
-            <h2 id="install-script-title" className={styles.scriptCardTitle}>
-              Installation Script
-            </h2>
-            <button
-              type="button"
-              className={
-                copied
-                  ? `${styles.copyBtn} ${styles.copyBtnDone}`
-                  : styles.copyBtn
-              }
-              onClick={handleCopyScript}
+      </StackItem>
+      <StackItem>
+        <Card isCompact>
+          <CardBody>
+            <Title headingLevel="h4" size="md" style={{ fontFamily: "var(--pf-t--global--font--family--mono)" }}>
+              enclave-vm-deployment.iso
+            </Title>
+            <Flex gap={{ default: "gapSm" }} style={{ marginTop: "var(--pf-t--global--spacer--sm)" }}>
+              <Label color="grey">ISO Image</Label>
+              <Label color="grey">~18.4 GB</Label>
+              <Label status="success">Ready</Label>
+            </Flex>
+          </CardBody>
+        </Card>
+      </StackItem>
+      <StackItem>
+        <Flex justifyContent={{ default: "justifyContentCenter" }}>
+          <Button variant="primary">Download ISO</Button>
+        </Flex>
+      </StackItem>
+      <StackItem>
+        <Card isCompact>
+          <CardBody>
+            <CardTitle component="h2">Installation Instructions</CardTitle>
+            <div style={{ marginTop: "var(--pf-t--global--spacer--sm)" }}>
+              <Content component="p">
+                Follow these steps to deploy on your disconnected RHEL bastion host
+              </Content>
+            </div>
+            <List
+              component={ListComponent.ol}
+              type={OrderType.number}
+              style={{ marginTop: "var(--pf-t--global--spacer--md)" }}
             >
-              {copied ? "Copied!" : "Copy"}
-            </button>
-          </div>
-          <pre className={styles.scriptPre}>
-            <code>{script}</code>
-          </pre>
-        </section>
-      </div>
-    </div>
+              {INSTALL_STEPS.map((s) => (
+                <ListItem key={s.title}>
+                  <Title headingLevel="h3" size="md">
+                    {s.title}
+                  </Title>
+                  <Content component="p">{s.body}</Content>
+                </ListItem>
+              ))}
+            </List>
+          </CardBody>
+        </Card>
+      </StackItem>
+      <StackItem>
+        <Card isCompact>
+          <CardBody>
+            <CardTitle component="h2">Installation Script</CardTitle>
+            <ClipboardCopy
+              variant={ClipboardCopyVariant.expansion}
+              isExpanded
+              isCode
+              hoverTip="Copy"
+              clickTip="Copied!"
+              style={{ marginTop: "var(--pf-t--global--spacer--md)" }}
+            >
+              {script}
+            </ClipboardCopy>
+          </CardBody>
+        </Card>
+      </StackItem>
+    </Stack>
   );
 }
 
-export function GeneratingArtifact({ subtitle }: Props) {
+export function GeneratingArtifact({ subtitle, omitPageTitle = false }: Props) {
   const [percent, setPercent] = useState(1);
   const statusText = useMemo(
     () => statusMessageForPercent(percent),
-    [percent]
+    [percent],
   );
   const isComplete = percent >= 100;
 
@@ -256,39 +218,31 @@ export function GeneratingArtifact({ subtitle }: Props) {
   }
 
   return (
-    <div className={styles.root} aria-busy="true">
-      <div className={styles.spinnerWrap}>
-        <SpinnerIcon className={styles.spinner} />
-      </div>
-      <h1 className={`${appStyles.title} ${appStyles.titleStep}`}>
-        Generating Your Deployment Artifact
-      </h1>
-      <p className={`${appStyles.lead} ${appStyles.leadStep}`}>{subtitle}</p>
-
-      <div className={styles.progressWrap}>
-        <div className={styles.statusRow}>
-          <p className={styles.statusText} aria-live="polite">
-            {statusText}
-          </p>
-          <span className={styles.percentText} aria-hidden>
-            {percent}%
-          </span>
-        </div>
-        <div
-          className={styles.progressTrack}
-          role="progressbar"
-          aria-valuemin={1}
-          aria-valuemax={100}
-          aria-valuenow={percent}
-          aria-valuetext={`${percent}% — ${statusText}`}
-          aria-label="Artifact generation progress"
-        >
+    <Stack hasGutter>
+      {omitPageTitle ? null : (
+        <StackItem>
+          <Title headingLevel="h1" size="2xl" style={{ textAlign: "center" }}>
+            Generating Your Deployment Artifact
+          </Title>
           <div
-            className={styles.progressFill}
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-      </div>
-    </div>
+            style={{
+              marginTop: "var(--pf-t--global--spacer--md)",
+              textAlign: "center",
+            }}
+          >
+            <Content component="p">{subtitle}</Content>
+          </div>
+        </StackItem>
+      )}
+      <StackItem>
+        <Progress
+          title={statusText}
+          value={percent}
+          measureLocation="outside"
+          valueText={`${percent}% — ${statusText}`}
+          aria-label="Artifact generation progress"
+        />
+      </StackItem>
+    </Stack>
   );
 }
