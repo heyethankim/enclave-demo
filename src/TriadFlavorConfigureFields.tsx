@@ -1,7 +1,8 @@
-import { useCallback, useState } from "react";
+import { Fragment, useCallback, useState } from "react";
 import {
   Button,
   FormGroup,
+  FormHelperText,
   TextInput,
   Title,
 } from "@patternfly/react-core";
@@ -29,6 +30,11 @@ export type FormState = {
   ingressVip: string;
   machineNetwork: string;
   hosts: AgentHost[];
+};
+
+export type ConfigureValidationIssue = {
+  flavorId: SovereignFlavorId;
+  messages: string[];
 };
 
 export function configureLayoutFor(id: SovereignFlavorId): ConfigureLayout {
@@ -167,10 +173,18 @@ function initialNetworkTriad(flavor: TriadFlavorId): {
 }
 
 function initialHostsTriad(flavor: TriadFlavorId): AgentHost[] {
-  if (flavor === "vm") {
-    return [makeVmHost1(), makeRandomHost("vm", 2)];
+  const hosts =
+    flavor === "vm"
+      ? [makeVmHost1(), makeRandomHost("vm", 2)]
+      : [makeRandomHost(flavor, 1), makeRandomHost(flavor, 2)];
+  /* Demo: only Cluster — Host 1 IP unset until the user fills it (Next-step validation). */
+  if (flavor === "cluster") {
+    const first = hosts[0];
+    if (first) {
+      hosts[0] = { ...first, ip: "" };
+    }
   }
-  return [makeRandomHost(flavor, 1), makeRandomHost(flavor, 2)];
+  return hosts;
 }
 
 function initialTriadFormState(flavor: TriadFlavorId): FormState {
@@ -225,11 +239,37 @@ export function initialFormState(flavorId: SovereignFlavorId): FormState {
   };
 }
 
+/** Validates selected configure forms (e.g. before leaving the Configure step). */
+export function validateConfigureForms(
+  selected: ReadonlySet<SovereignFlavorId>,
+  forms: Partial<Record<SovereignFlavorId, FormState>>,
+): ConfigureValidationIssue[] {
+  const issues: ConfigureValidationIssue[] = [];
+  for (const id of selected) {
+    if (id !== "cluster") {
+      continue;
+    }
+    const form = forms[id] ?? initialFormState(id);
+    const messages: string[] = [];
+    form.hosts.forEach((host, index) => {
+      if (host.ip.trim() === "") {
+        messages.push(`Host ${index + 1}: Enter the IP address.`);
+      }
+    });
+    if (messages.length > 0) {
+      issues.push({ flavorId: id, messages });
+    }
+  }
+  return issues;
+}
+
 type Props = {
   flavorId: SovereignFlavorId;
   form: FormState;
   onFormChange: (next: FormState) => void;
   readOnly?: boolean;
+  /** When true (after a failed “Next”), show inline errors for invalid fields. */
+  showSubmitValidationErrors?: boolean;
 };
 
 function FlavorConfigureReadOnlySummary({
@@ -241,9 +281,17 @@ function FlavorConfigureReadOnlySummary({
   layout: ConfigureLayout;
   id: (suffix: string) => string;
 }) {
-  const row = (label: string, value: string) => (
+  const row = (label: string, value: string, isRequired = false) => (
     <div key={label} className="trial-review-summary__row">
-      <span className="trial-review-summary__label">{label}</span>
+      <span className="trial-review-summary__label">
+        {label}
+        {isRequired ? (
+          <span className="trial-review-summary__label-required" aria-hidden>
+            {" "}
+            *
+          </span>
+        ) : null}
+      </span>
       <span className="trial-review-summary__value">{value}</span>
     </div>
   );
@@ -266,8 +314,8 @@ function FlavorConfigureReadOnlySummary({
           Basic
         </Title>
         <div className="trial-review-summary__rows">
-          {row("Base domain", form.baseDomain || "—")}
-          {row("Service name", form.serviceName || "—")}
+          {row("Base domain", form.baseDomain || "—", true)}
+          {row("Cluster name", form.serviceName || "—", true)}
         </div>
       </section>
 
@@ -319,11 +367,11 @@ function FlavorConfigureReadOnlySummary({
                   Host {index + 1}
                 </Title>
                 <div className="trial-review-summary__rows">
-                  {row("Name", host.name || "—")}
-                  {row("MAC address", host.mac || "—")}
-                  {row("IP address", host.ip || "—")}
+                  {row("Name", host.name || "—", true)}
+                  {row("MAC address", host.mac || "—", true)}
+                  {row("IP address", host.ip || "—", true)}
                   {row("Redfish", host.redfish || "—")}
-                  {row("Root disk", host.rootDisk || "—")}
+                  {row("Root disk", host.rootDisk || "—", true)}
                   {row("Redfish user", host.redfishUser || "—")}
                   {row("Redfish password", host.redfishPassword || "—")}
                 </div>
@@ -379,6 +427,7 @@ export function FlavorConfigureFields({
   form,
   onFormChange,
   readOnly = false,
+  showSubmitValidationErrors = false,
 }: Props) {
   const layout = configureLayoutFor(flavorId);
   const p = flavorId;
@@ -438,11 +487,16 @@ export function FlavorConfigureFields({
           Basic
         </Title>
         <div className="trial-configure-summary__vm-basic-grid">
-          <FormGroup label="Base domain" fieldId={id("base-domain")}>
+          <FormGroup
+            label="Base domain"
+            fieldId={id("base-domain")}
+            isRequired
+          >
             <TextInput
               id={id("base-domain")}
               name={`${p}BaseDomain`}
               value={form.baseDomain}
+              isRequired
               {...readOnlyProps}
               onChange={
                 readOnly
@@ -452,18 +506,23 @@ export function FlavorConfigureFields({
               aria-label="Base domain"
             />
           </FormGroup>
-          <FormGroup label="Service name" fieldId={id("service-name")}>
+          <FormGroup
+            label="Cluster name"
+            fieldId={id("service-name")}
+            isRequired
+          >
             <TextInput
               id={id("service-name")}
               name={`${p}ServiceName`}
               value={form.serviceName}
+              isRequired
               {...readOnlyProps}
               onChange={
                 readOnly
                   ? () => {}
                   : (_e, v) => onFormChange({ ...form, serviceName: v })
               }
-              aria-label="Service name"
+              aria-label="Cluster name"
             />
           </FormGroup>
         </div>
@@ -555,7 +614,15 @@ export function FlavorConfigureFields({
             ) : null}
           </div>
           <div className="trial-configure-summary__vm-agent-hosts">
-            {form.hosts.map((host, index) => (
+            {form.hosts.map((host, index) => {
+              const ipFieldId = `${id("host")}-${host.id}-ip`;
+              const ipHelperId = `${ipFieldId}-helper`;
+              const ipMissing = host.ip.trim() === "";
+              const showIpError =
+                showSubmitValidationErrors &&
+                ipMissing &&
+                flavorId === "cluster";
+              return (
               <div key={host.id} className="trial-configure-summary__vm-host-card">
                 <Title
                   headingLevel="h5"
@@ -568,10 +635,12 @@ export function FlavorConfigureFields({
                   <FormGroup
                     label="Name"
                     fieldId={`${id("host")}-${host.id}-name`}
+                    isRequired
                   >
                     <TextInput
                       id={`${id("host")}-${host.id}-name`}
                       value={host.name}
+                      isRequired
                       {...readOnlyProps}
                       onChange={(_e, v) => updateHost(host.id, { name: v })}
                       aria-label={`Host ${index + 1} name`}
@@ -580,10 +649,12 @@ export function FlavorConfigureFields({
                   <FormGroup
                     label="MAC address"
                     fieldId={`${id("host")}-${host.id}-mac`}
+                    isRequired
                   >
                     <TextInput
                       id={`${id("host")}-${host.id}-mac`}
                       value={host.mac}
+                      isRequired
                       {...readOnlyProps}
                       onChange={(_e, v) => updateHost(host.id, { mac: v })}
                       aria-label={`Host ${index + 1} MAC address`}
@@ -591,15 +662,34 @@ export function FlavorConfigureFields({
                   </FormGroup>
                   <FormGroup
                     label="IP address"
-                    fieldId={`${id("host")}-${host.id}-ip`}
+                    fieldId={ipFieldId}
+                    isRequired
                   >
-                    <TextInput
-                      id={`${id("host")}-${host.id}-ip`}
-                      value={host.ip}
-                      {...readOnlyProps}
-                      onChange={(_e, v) => updateHost(host.id, { ip: v })}
-                      aria-label={`Host ${index + 1} IP address`}
-                    />
+                    <Fragment>
+                      <TextInput
+                        id={ipFieldId}
+                        value={host.ip}
+                        isRequired
+                        validated={showIpError ? "error" : "default"}
+                        aria-invalid={showIpError}
+                        aria-describedby={
+                          showIpError ? ipHelperId : undefined
+                        }
+                        {...readOnlyProps}
+                        onChange={(_e, v) =>
+                          updateHost(host.id, { ip: v })
+                        }
+                        aria-label={`Host ${index + 1} IP address`}
+                      />
+                      {showIpError ? (
+                        <FormHelperText
+                          id={ipHelperId}
+                          className="trial-field-helper--error"
+                        >
+                          Enter the host IP address.
+                        </FormHelperText>
+                      ) : null}
+                    </Fragment>
                   </FormGroup>
                   <FormGroup
                     label="Redfish"
@@ -619,10 +709,12 @@ export function FlavorConfigureFields({
                     <FormGroup
                       label="Root disk"
                       fieldId={`${id("host")}-${host.id}-root`}
+                      isRequired
                     >
                       <TextInput
                         id={`${id("host")}-${host.id}-root`}
                         value={host.rootDisk}
+                        isRequired
                         {...readOnlyProps}
                         onChange={(_e, v) =>
                           updateHost(host.id, { rootDisk: v })
@@ -693,7 +785,8 @@ export function FlavorConfigureFields({
                   </FormGroup>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       ) : null}

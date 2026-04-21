@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Button,
   Card,
@@ -21,7 +21,10 @@ import {
 } from "./SovereignFlavorCards";
 import { ConfigureDeployment } from "./ConfigureDeployment";
 import type { FormState } from "./TriadFlavorConfigureFields";
-import { initialFormState } from "./TriadFlavorConfigureFields";
+import {
+  initialFormState,
+  validateConfigureForms,
+} from "./TriadFlavorConfigureFields";
 import {
   ARTIFACT_SUCCESS_SUBTITLE,
   ARTIFACT_SUCCESS_TITLE,
@@ -123,7 +126,22 @@ export default function App() {
       {},
     ),
   );
+  const [configureValidationAttempted, setConfigureValidationAttempted] =
+    useState(false);
+  const [configureValidationFocusNonce, setConfigureValidationFocusNonce] =
+    useState(0);
   const step = steps[index];
+
+  const configureIssues = useMemo(
+    () =>
+      validateConfigureForms(selectedSovereignFlavors, configureForms),
+    [selectedSovereignFlavors, configureForms],
+  );
+
+  const showConfigureValidation =
+    step.id === "configure" &&
+    configureValidationAttempted &&
+    configureIssues.length > 0;
 
   useEffect(() => {
     setConfigureForms((prev) =>
@@ -144,6 +162,23 @@ export default function App() {
     }
   }, [step.id]);
 
+  useEffect(() => {
+    if (step.id !== "configure") {
+      setConfigureValidationAttempted(false);
+      setConfigureValidationFocusNonce(0);
+    }
+  }, [step.id]);
+
+  useEffect(() => {
+    if (
+      step.id === "configure" &&
+      configureValidationAttempted &&
+      configureIssues.length === 0
+    ) {
+      setConfigureValidationAttempted(false);
+    }
+  }, [step.id, configureValidationAttempted, configureIssues.length]);
+
   const isLast = index === steps.length - 1;
 
   const isFlavorOrConfigureOrArtifact =
@@ -153,6 +188,22 @@ export default function App() {
     step.id === "artifact";
 
   const goBack = () => setIndex((i) => Math.max(0, i - 1));
+
+  const goNext = useCallback(() => {
+    if (step.id === "configure") {
+      const issues = validateConfigureForms(
+        selectedSovereignFlavors,
+        configureForms,
+      );
+      if (issues.length > 0) {
+        setConfigureValidationAttempted(true);
+        setConfigureValidationFocusNonce((n) => n + 1);
+        return;
+      }
+      setConfigureValidationAttempted(false);
+    }
+    setIndex((i) => Math.min(steps.length - 1, i + 1));
+  }, [configureForms, selectedSovereignFlavors, step.id]);
 
   const toggleSovereignFlavor = (id: SovereignFlavorId) => {
     setSelectedSovereignFlavors((prev) => {
@@ -225,7 +276,14 @@ export default function App() {
         <div className="trial-wizard-inner">
           <Card
             isRounded
-            className="trial-wizard-surface"
+            className={[
+              "trial-wizard-surface",
+              step.id === "configure" || step.id === "review"
+                ? "trial-wizard-surface--configure-card"
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             aria-label="Enclave step content"
           >
             <CardBody
@@ -319,6 +377,15 @@ export default function App() {
                     selected={selectedSovereignFlavors}
                     forms={configureForms}
                     onFormChange={handleConfigureFormChange}
+                    configureValidationIssues={
+                      showConfigureValidation ? configureIssues : []
+                    }
+                    configureValidationFocusNonce={
+                      showConfigureValidation
+                        ? configureValidationFocusNonce
+                        : 0
+                    }
+                    showSubmitValidationErrors={showConfigureValidation}
                   />
                 ) : null}
                 {step.id === "review" ? (
@@ -421,6 +488,15 @@ export default function App() {
                         ))}
                       </div>
                     ) : null}
+                    <div className="trial-welcome-cta">
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        onClick={() => setIndex(1)}
+                      >
+                        Get started
+                      </Button>
+                    </div>
                   </>
                 ) : null}
               </div>
@@ -429,19 +505,10 @@ export default function App() {
         </div>
       </div>
 
-      <div className="trial-wizard-bottom" role="contentinfo" aria-label="Step actions">
-        <div className="trial-wizard-inner">
-          <div className="trial-wizard-bottom-align">
-            {step.id === "welcome" ? (
-              <Flex
-                justifyContent={{ default: "justifyContentFlexEnd" }}
-                fullWidth
-              >
-                <Button variant="primary" onClick={() => setIndex(1)}>
-                  Get started
-                </Button>
-              </Flex>
-            ) : (
+      {step.id !== "welcome" ? (
+        <div className="trial-wizard-bottom" role="contentinfo" aria-label="Step actions">
+          <div className="trial-wizard-inner">
+            <div className="trial-wizard-bottom-align">
               <Flex
                 justifyContent={{ default: "justifyContentSpaceBetween" }}
                 alignItems={{ default: "alignItemsCenter" }}
@@ -470,19 +537,17 @@ export default function App() {
                         (step.id === "flavor" &&
                           selectedSovereignFlavors.size === 0)
                       }
-                      onClick={() =>
-                        setIndex((i) => Math.min(steps.length - 1, i + 1))
-                      }
+                      onClick={goNext}
                     >
                       Next
                     </Button>
                   )}
                 </FlexItem>
               </Flex>
-            )}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

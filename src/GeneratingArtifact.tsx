@@ -135,7 +135,9 @@ function ArtifactSuccessView() {
             </Label>
           </Flex>
           <div className="trial-artifact-success__cta">
-            <Button variant="primary">Download ISO</Button>
+            <Button variant="primary" size="lg" aria-label="Download ISO">
+              Download ISO
+            </Button>
           </div>
         </div>
       </StackItem>
