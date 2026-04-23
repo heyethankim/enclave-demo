@@ -37,6 +37,7 @@ import { AiFlavorIcon, ClusterFlavorIcon, CubesFlavorIcon } from "./FlavorCardIc
 import type { SecureComplyState } from "./SecureComplyStep";
 import { SecureComplyReadOnlySummary } from "./SecureComplyReadOnlySummary";
 import { AgentHostWorkloadCard } from "./AgentHostWorkloadCard";
+import { publicAssetUrl } from "./publicAssetUrl";
 
 type Props = {
   selected: ReadonlySet<SovereignFlavorId>;
@@ -184,37 +185,37 @@ const VM_OS_IMAGE_OPTIONS: {
     id: "trial-vm-os-rhel9",
     key: "vmOsRhel9",
     label: "Red Hat Enterprise Linux 9",
-    logoSrc: "/os-logos/redhat-hat.svg",
+    logoSrc: publicAssetUrl("os-logos/redhat-hat.svg"),
   },
   {
     id: "trial-vm-os-rhel8",
     key: "vmOsRhel8",
     label: "Red Hat Enterprise Linux 8",
-    logoSrc: "/os-logos/redhat-hat.svg",
+    logoSrc: publicAssetUrl("os-logos/redhat-hat.svg"),
   },
   {
     id: "trial-vm-os-fcos",
     key: "vmOsFedoraCoreos",
     label: "Fedora CoreOS",
-    logoSrc: "/os-logos/fedora.png",
+    logoSrc: publicAssetUrl("os-logos/fedora.png"),
   },
   {
     id: "trial-vm-os-ubuntu2204",
     key: "vmOsUbuntu2204",
     label: "Ubuntu 22.04 LTS",
-    logoSrc: "/os-logos/ubuntu.png",
+    logoSrc: publicAssetUrl("os-logos/ubuntu.png"),
   },
   {
     id: "trial-vm-os-win2022",
     key: "vmOsWindows2022",
     label: "Windows Server 2022",
-    logoSrc: "/os-logos/windows.png",
+    logoSrc: publicAssetUrl("os-logos/windows.png"),
   },
   {
     id: "trial-vm-os-centos9",
     key: "vmOsCentosStream9",
     label: "CentOS Stream 9",
-    logoSrc: "/os-logos/centos-stream.png",
+    logoSrc: publicAssetUrl("os-logos/centos-stream.png"),
   },
 ];
 
@@ -234,25 +235,25 @@ const MODELS_VALIDATED_CHECKBOX_OPTIONS: {
     id: "trial-model-granite",
     key: "modelIbmGranite",
     label: "IBM Granite",
-    logoSrc: "/model-logos/ibm-granite.png",
+    logoSrc: publicAssetUrl("model-logos/ibm-granite.png"),
   },
   {
     id: "trial-model-llama",
     key: "modelMetaLlama3",
     label: "Meta Llama 3",
-    logoSrc: "/model-logos/meta-llama.png",
+    logoSrc: publicAssetUrl("model-logos/meta-llama.png"),
   },
   {
     id: "trial-model-mistral",
     key: "modelMistralAi",
     label: "Mistral AI",
-    logoSrc: "/model-logos/mistral.png",
+    logoSrc: publicAssetUrl("model-logos/mistral.png"),
   },
   {
     id: "trial-model-mixtral",
     key: "modelMixtral8x7b",
     label: "Mixtral 8x7B",
-    logoSrc: "/model-logos/mixtral.png",
+    logoSrc: publicAssetUrl("model-logos/mixtral.png"),
   },
 ];
 
@@ -268,13 +269,13 @@ const MODELS_GPU_CHECKBOX_OPTIONS: {
     id: "trial-model-gpu-nvidia",
     key: "gpuInstallNvidiaDrivers",
     label: "Install NVIDIA GPU Drivers",
-    logoSrc: "/model-logos/nvidia.png",
+    logoSrc: publicAssetUrl("model-logos/nvidia.png"),
   },
   {
     id: "trial-model-gpu-cuda",
     key: "gpuInstallCudaToolkit",
     label: "Install CUDA Toolkit",
-    logoSrc: "/model-logos/cuda.png",
+    logoSrc: publicAssetUrl("model-logos/cuda.png"),
   },
 ];
 
