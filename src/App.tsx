@@ -60,7 +60,7 @@ const steps: WizardStep[] = [
   {
     id: "welcome",
     stepperLabel: "Welcome",
-    title: "Enclave",
+    title: "Open Sovereign AI Cloud",
     highlights: [
       {
         icon: "bootstrap",

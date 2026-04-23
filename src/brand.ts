@@ -1,8 +1,8 @@
 /**
- * Wizard branding: OSAC when running locally, Enclave when deployed (e.g. GitHub Pages).
+ * Wizard branding: Open Sovereign AI Cloud (OSAC) for all environments.
  *
- * Uses `import.meta.env.DEV` for `npm run dev`, and also treats `localhost` / `127.0.0.1`
- * at runtime so `vite preview` (production bundle on loopback) still shows OSAC.
+ * `local` is still derived from dev / loopback hosts so `trial-local-dev` CSS
+ * can tweak layout in `npm run dev` and `vite preview` on localhost.
  */
 
 export function isWizardLocalUi(): boolean {
@@ -22,7 +22,7 @@ export function isWizardLocalUi(): boolean {
 }
 
 export type WizardBrand = {
-  /** True when showing OSAC / loopback UI */
+  /** True when running dev server or preview on loopback (layout tweaks only) */
   local: boolean;
   browserTabTitle: string;
   welcomeHeroTitle: string;
@@ -39,24 +39,13 @@ export function getWizardBrand(): WizardBrand {
   const base = import.meta.env.BASE_URL;
   return {
     local,
-    browserTabTitle: local ? "OSAC setup wizard" : "Enclave setup wizard",
-    welcomeHeroTitle: local
-      ? "Welcome to Open Sovereign AI Cloud"
-      : "Welcome to Enclave",
-    headerLandmarkLabel: local
-      ? "Red Hat Open Sovereign AI Cloud"
-      : "Red Hat Enclave",
-    headerLogoAlt: local
-      ? "Red Hat Open Sovereign AI Cloud"
-      : "Red Hat Enclave",
-    mainStepAriaLabel: local
-      ? "Open Sovereign AI Cloud step content"
-      : "Enclave step content",
-    headerLogoSrc: local
-      ? `${base}enclave-header-logo-osac.png`
-      : `${base}enclave-header-logo.png`,
+    browserTabTitle: "Open Sovereign AI Cloud setup wizard",
+    welcomeHeroTitle: "Welcome to Open Sovereign AI Cloud",
+    headerLandmarkLabel: "Red Hat Open Sovereign AI Cloud",
+    headerLogoAlt: "Red Hat Open Sovereign AI Cloud",
+    mainStepAriaLabel: "Open Sovereign AI Cloud step content",
+    headerLogoSrc: `${base}redhat-osac.png`,
     headerLogoWidth: 1024,
-    /* OSAC artwork is 1024×204; prod PNG matches until a taller Enclave asset is restored */
     headerLogoHeight: 204,
   };
 }
