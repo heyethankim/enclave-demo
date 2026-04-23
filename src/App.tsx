@@ -11,7 +11,7 @@ import {
   Title,
   Tooltip,
 } from "@patternfly/react-core";
-import { CheckIcon } from "@patternfly/react-icons";
+import { CheckCircleIcon, CheckIcon } from "@patternfly/react-icons";
 import { BootstrapGlyph, DisconnectedGlyph, ShieldGlyph } from "./HighlightIcons";
 import {
   DEFAULT_SOVEREIGN_FLAVOR_SELECTION,
@@ -28,8 +28,16 @@ import {
 import {
   ARTIFACT_SUCCESS_SUBTITLE,
   ARTIFACT_SUCCESS_TITLE,
+  downloadDeploymentConfig,
+  downloadInstallerIso,
   GeneratingArtifact,
 } from "./GeneratingArtifact";
+import {
+  initialSecureComplyState,
+  SecureComplyStep,
+  type SecureComplyState,
+} from "./SecureComplyStep";
+import { getWizardBrand } from "./brand";
 
 type HighlightIconId = "bootstrap" | "disconnected" | "policies";
 
@@ -76,13 +84,21 @@ const steps: WizardStep[] = [
     id: "flavor",
     stepperLabel: "Select",
     title: "Select your sovereign cloud setup",
-    body: "Choose use cases—configuration adjusts automatically.",
+    body: "Choose your use cases—configuration can be adjusted accordingly.",
   },
   {
     id: "configure",
     stepperLabel: "Configure",
     title: "Configure your deployment",
     body: "Answer a few questions to set up your chosen services.",
+  },
+  {
+    id: "secure",
+    stepperLabel: "Secure & Comply",
+    title: "Secure & comply",
+    subtitle:
+      "Answer a few questions to set your data residency and regulatory requirements.",
+    body: "",
   },
   {
     id: "review",
@@ -130,7 +146,12 @@ export default function App() {
     useState(false);
   const [configureValidationFocusNonce, setConfigureValidationFocusNonce] =
     useState(0);
+  const [secureComply, setSecureComply] = useState<SecureComplyState>(() =>
+    initialSecureComplyState(),
+  );
   const step = steps[index];
+
+  const wizardBrand = useMemo(() => getWizardBrand(), []);
 
   const configureIssues = useMemo(
     () =>
@@ -183,6 +204,7 @@ export default function App() {
 
   const isFlavorOrConfigureOrArtifact =
     step.id === "flavor" ||
+    step.id === "secure" ||
     step.id === "configure" ||
     step.id === "review" ||
     step.id === "artifact";
@@ -190,6 +212,12 @@ export default function App() {
   const goBack = () => setIndex((i) => Math.max(0, i - 1));
 
   const goNext = useCallback(() => {
+    if (
+      step.id === "secure" &&
+      secureComply.dataResidencyRegionIds.length === 0
+    ) {
+      return;
+    }
     if (step.id === "configure") {
       const issues = validateConfigureForms(
         selectedSovereignFlavors,
@@ -203,7 +231,7 @@ export default function App() {
       setConfigureValidationAttempted(false);
     }
     setIndex((i) => Math.min(steps.length - 1, i + 1));
-  }, [configureForms, selectedSovereignFlavors, step.id]);
+  }, [configureForms, secureComply.dataResidencyRegionIds, selectedSovereignFlavors, step.id]);
 
   const toggleSovereignFlavor = (id: SovereignFlavorId) => {
     setSelectedSovereignFlavors((prev) => {
@@ -234,15 +262,18 @@ export default function App() {
 
   return (
     <div className="trial-page trial-wizard-app">
-      <header className="trial-wizard-top" aria-label="Red Hat Enclave">
+      <header
+        className="trial-wizard-top"
+        aria-label={wizardBrand.headerLandmarkLabel}
+      >
         <div className="trial-wizard-logo-bleed">
           <div className="trial-wizard-logo-wrap">
             <img
               className="trial-wizard-logo"
-              src={`${import.meta.env.BASE_URL}enclave-header-logo.png`}
-              alt="Red Hat Enclave"
-              width={1024}
-              height={307}
+              src={wizardBrand.headerLogoSrc}
+              alt={wizardBrand.headerLogoAlt}
+              width={wizardBrand.headerLogoWidth}
+              height={wizardBrand.headerLogoHeight}
               loading="eager"
               decoding="async"
             />
@@ -278,13 +309,17 @@ export default function App() {
             isRounded
             className={[
               "trial-wizard-surface",
-              step.id === "configure" || step.id === "review"
+              step.id === "welcome" ||
+              step.id === "flavor" ||
+              step.id === "secure" ||
+              step.id === "configure" ||
+              step.id === "review"
                 ? "trial-wizard-surface--configure-card"
                 : "",
             ]
               .filter(Boolean)
               .join(" ")}
-            aria-label="Enclave step content"
+            aria-label={wizardBrand.mainStepAriaLabel}
           >
             <CardBody
               style={{
@@ -309,17 +344,38 @@ export default function App() {
                 >
                   <div className="trial-wizard-main-heading__primary">
                     {displayPageTitle ? (
-                      <Title
-                        headingLevel="h1"
-                        size="2xl"
-                        className="trial-wizard-h1"
-                        style={{
-                          margin: 0,
-                          color: "#151515",
-                        }}
-                      >
-                        {displayPageTitle}
-                      </Title>
+                      step.id === "artifact" &&
+                      artifactGenerationComplete ? (
+                        <div className="trial-wizard-artifact-success-title-row">
+                          <CheckCircleIcon
+                            className="trial-wizard-artifact-success-title-row__icon"
+                            aria-hidden
+                          />
+                          <Title
+                            headingLevel="h1"
+                            size="2xl"
+                            className="trial-wizard-h1"
+                            style={{
+                              margin: 0,
+                              color: "#151515",
+                            }}
+                          >
+                            {displayPageTitle}
+                          </Title>
+                        </div>
+                      ) : (
+                        <Title
+                          headingLevel="h1"
+                          size="2xl"
+                          className="trial-wizard-h1"
+                          style={{
+                            margin: 0,
+                            color: "#151515",
+                          }}
+                        >
+                          {displayPageTitle}
+                        </Title>
+                      )
                     ) : null}
                     {displayPageSubtitle ? (
                       <p className="trial-wizard-page-sub">{displayPageSubtitle}</p>
@@ -372,6 +428,9 @@ export default function App() {
                     onToggle={toggleSovereignFlavor}
                   />
                 ) : null}
+                {step.id === "secure" ? (
+                  <SecureComplyStep value={secureComply} onChange={setSecureComply} />
+                ) : null}
                 {step.id === "configure" ? (
                   <ConfigureDeployment
                     selected={selectedSovereignFlavors}
@@ -394,15 +453,17 @@ export default function App() {
                     forms={configureForms}
                     onFormChange={handleConfigureFormChange}
                     readOnly
+                    secureComply={secureComply}
                   />
                 ) : null}
                 {step.id === "welcome" ? (
                   <>
                     <div
                       style={{
-                        maxWidth: "36rem",
-                        marginInline: "auto",
+                        width: "100%",
+                        maxWidth: "100%",
                         marginTop: 0,
+                        boxSizing: "border-box",
                       }}
                     >
                       <Title
@@ -417,7 +478,7 @@ export default function App() {
                           letterSpacing: "-0.02em",
                         }}
                       >
-                        Welcome to Enclave
+                        {wizardBrand.welcomeHeroTitle}
                       </Title>
                       <Content
                         component="p"
@@ -525,17 +586,43 @@ export default function App() {
                 </FlexItem>
                 <FlexItem>
                   {step.id === "artifact" && artifactGenerationComplete ? (
-                    <Button variant="primary" aria-label="Download ISO">
-                      Download ISO
-                    </Button>
+                    <Flex
+                      gap={{ default: "gapSm" }}
+                      flexWrap={{ default: "wrap" }}
+                      justifyContent={{ default: "justifyContentFlexEnd" }}
+                    >
+                      <Button
+                        variant="primary"
+                        aria-label="Download installer ISO"
+                        onClick={downloadInstallerIso}
+                      >
+                        Download installer ISO
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        aria-label="Download config"
+                        onClick={downloadDeploymentConfig}
+                      >
+                        Download config
+                      </Button>
+                    </Flex>
                   ) : (
                     <Button
+                      id="trial-wizard-next-step"
                       variant="primary"
                       aria-label="Next step"
+                      title={
+                        step.id === "secure" &&
+                        secureComply.dataResidencyRegionIds.length === 0
+                          ? "Select at least one data residency region to continue."
+                          : undefined
+                      }
                       isDisabled={
                         isLast ||
                         (step.id === "flavor" &&
-                          selectedSovereignFlavors.size === 0)
+                          selectedSovereignFlavors.size === 0) ||
+                        (step.id === "secure" &&
+                          secureComply.dataResidencyRegionIds.length === 0)
                       }
                       onClick={goNext}
                     >

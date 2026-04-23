@@ -4,7 +4,10 @@ import "@patternfly/patternfly/patternfly.css";
 import "./trial-wizard.css";
 import "./index.css";
 import App from "./App";
+import { applyWizardChrome } from "./brand";
 import { ErrorBoundary } from "./ErrorBoundary";
+
+applyWizardChrome();
 
 const el = document.getElementById("root");
 if (!el) {

@@ -19,11 +19,21 @@
 }
 
 .trial-wizard-inner {
-  max-width: min(1200px, 92vw);
+  max-width: var(--trial-wizard-shell-max);
   margin: 0 auto;
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   padding: 0 1.5rem;
+}
+
+/* Main card column: fixed cap + minmax grid so dense configure forms cannot widen the sheet */
+.trial-wizard-main > .trial-wizard-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: stretch;
+  width: min(100%, var(--trial-wizard-shell-max));
+  max-width: var(--trial-wizard-shell-max);
 }
 
 .trial-wizard-logo-bleed {
@@ -55,19 +65,33 @@
   vertical-align: top;
 }
 
-.trial-wizard-logo {
+/* Scoped to the app shell so header logo sizing wins over generic PatternFly img rules */
+.trial-wizard-app .trial-wizard-logo {
   display: block;
   width: auto;
-  height: 2.6rem;
-  max-width: min(32rem, 100vw);
+  height: 2.2rem;
+  max-width: min(28rem, 100vw);
   object-fit: contain;
   object-position: center center;
 }
 
 @media (min-width: 48rem) {
-  .trial-wizard-logo {
-    height: 3.05rem;
-    max-width: min(36rem, 100vw);
+  .trial-wizard-app .trial-wizard-logo {
+    height: 2.6rem;
+    max-width: min(32rem, 100vw);
+  }
+}
+
+/* Local dev only — modest bump over production (see main.tsx `trial-local-dev`) */
+.trial-local-dev .trial-wizard-app .trial-wizard-logo {
+  height: 3.1rem;
+  max-width: min(34rem, 100vw);
+}
+
+@media (min-width: 48rem) {
+  .trial-local-dev .trial-wizard-app .trial-wizard-logo {
+    height: 3.65rem;
+    max-width: min(38rem, 100vw);
   }
 }
 
@@ -116,12 +140,15 @@
 .trial-wizard-main {
   flex: 1 1 0;
   min-height: 0;
+  min-width: 0;
   padding: 1.5rem 0 1.5rem;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior-y: contain;
   background: #e8e9eb;
   -webkit-overflow-scrolling: touch;
+  /* Avoid main card “jumping” narrower when a step (e.g. Secure) overflows and the scrollbar appears */
+  scrollbar-gutter: stable;
 }
 
 .trial-wizard-main-heading {
@@ -143,6 +170,26 @@
 
 .trial-wizard-main-heading__primary {
   flex: 1 1 auto;
+  min-width: 0;
+}
+
+.trial-wizard-artifact-success-title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--pf-t--global--spacer--sm);
+}
+
+.trial-wizard-artifact-success-title-row__icon {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  margin-top: 0.1rem;
+  color: var(--pf-t--global--icon--color--status--success--default);
+}
+
+.trial-wizard-artifact-success-title-row .trial-wizard-h1 {
+  flex: 1;
   min-width: 0;
 }
 
@@ -177,27 +224,22 @@
 
 .trial-wizard-surface.pf-v6-c-card,
 .trial-wizard-surface {
-  max-width: var(--trial-wizard-card-max);
+  max-width: 100%;
   margin: 0 auto;
   width: 100%;
+  min-width: 0;
   background: #fff;
   border: 1px solid var(--trial-border) !important;
   border-radius: var(--trial-card-radius);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
-/* Configure / Review card: PF card body + tabs can pick up gray fills — keep sheet white */
+.trial-wizard-surface.pf-v6-c-card .pf-v6-c-card__body {
+  min-width: 0;
+}
+
+/* Configure / Review card: PF card body can pick up gray fills — keep sheet white */
 .trial-wizard-surface--configure-card.pf-v6-c-card .pf-v6-c-card__body {
-  background-color: #fff;
-}
-
-.trial-wizard-surface--configure-card .trial-configure-summary__tabs.pf-v6-c-tabs {
-  background-color: #fff;
-}
-
-.trial-wizard-surface--configure-card
-  .trial-configure-summary__tabs
-  .pf-v6-c-tabs__list {
   background-color: #fff;
 }
 
@@ -217,11 +259,20 @@
 }
 
 .trial-wizard-bottom-align {
-  max-width: var(--trial-wizard-card-max);
+  max-width: 100%;
   margin-left: auto;
   margin-right: auto;
   width: 100%;
   box-sizing: border-box;
+}
+
+/*
+ * Inset footer actions slightly less than full card-body padding so Back/Next sit
+ * a bit wider than main content but still roughly within the card (shell 1.5rem +
+ * ~1rem toward card edge). Tune the second term vs App CardBody horizontal (1.75rem).
+ */
+.trial-wizard-bottom .trial-wizard-inner {
+  padding-inline: calc(1.5rem + 1rem);
 }
 
 .trial-wizard-info-alert.pf-v6-c-alert {
@@ -235,7 +286,8 @@
 }
 
 .trial-page {
-  --trial-wizard-card-max: min(960px, 100%);
+  /* Stepper, main card, footer — wider column so four flavor cards have more room */
+  --trial-wizard-shell-max: min(74rem, 95vw, calc(100vw - 2rem));
   --trial-primary: #0066cc;
   --trial-brand-red: #ee0000;
   --trial-line: #d9d9d9;
@@ -331,6 +383,11 @@
   font-weight: 500 !important;
 }
 
+/* Local dev only — welcome hero a touch smaller (see main.tsx `trial-local-dev`) */
+.trial-local-dev .trial-welcome-hero-title.pf-v6-c-title {
+  font-size: clamp(1.42rem, 0.33rem + 1.95vw, 2rem) !important;
+}
+
 /* ——— Stepper ——— */
 
 .trial-stepper-wrap {
@@ -422,7 +479,7 @@
   align-items: stretch;
   margin-top: var(--pf-t--global--spacer--xl);
   width: 100%;
-  max-width: min(72rem, 100%);
+  max-width: 100%;
   margin-left: auto;
   margin-right: auto;
   box-sizing: border-box;
@@ -532,7 +589,7 @@
   display: flex;
   justify-content: center;
   width: 100%;
-  max-width: min(72rem, 100%);
+  max-width: 100%;
   margin-top: var(--pf-t--global--spacer--2xl);
   margin-left: auto;
   margin-right: auto;
@@ -545,21 +602,22 @@
   gap: var(--pf-t--global--spacer--lg);
   margin-top: var(--pf-t--global--spacer--xl);
   width: 100%;
-  max-width: min(72rem, 100%);
+  max-width: 100%;
   margin-left: auto;
   margin-right: auto;
   box-sizing: border-box;
 }
 
-@media (min-width: 62rem) {
+@media (min-width: 30rem) and (max-width: 59.99rem) {
   .trial-flavor-options-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 48rem) and (max-width: 61.99rem) {
+/* Four-up once viewport fits `--trial-wizard-shell-max` (~60rem) */
+@media (min-width: 60rem) {
   .trial-flavor-options-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -598,7 +656,36 @@
     var(--pf-t--global--spacer--lg);
 }
 
-.trial-flavor-option-card__badge {
+@media (min-width: 60rem) {
+  .trial-flavor-option-card__body.pf-v6-c-card__body {
+    padding: var(--pf-t--global--spacer--lg) var(--pf-t--global--spacer--md)
+      var(--pf-t--global--spacer--md);
+    gap: var(--pf-t--global--spacer--sm);
+  }
+
+  .trial-flavor-option-card__title.pf-v6-c-title,
+  .trial-flavor-option-card__title {
+    font-size: 1.0625rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .trial-flavor-option-card__lead {
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+
+  .trial-flavor-option-card__includes-label {
+    font-size: 0.8125rem;
+  }
+
+  .trial-flavor-option-card__list.pf-v6-c-list {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+}
+
+.trial-flavor-option-card__badge,
+.trial-data-residency-region__badge {
   position: absolute;
   top: var(--pf-t--global--spacer--md);
   right: var(--pf-t--global--spacer--md);
@@ -614,8 +701,15 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
+/* Region tiles only: nudge position — same chip size as Select (flavor) cards */
+.trial-data-residency-region__badge {
+  top: 0.35rem;
+  right: 0.45rem;
+}
+
 .trial-flavor-option-card__icon,
-.trial-configure-summary__icon {
+.trial-configure-summary__icon,
+.trial-configure-workload__subsection-icon {
   --trial-flavor-icon-slot: 2.75rem;
   --trial-flavor-icon-size: 2.35rem;
   box-sizing: border-box;
@@ -630,7 +724,8 @@
 }
 
 .trial-flavor-option-card__icon svg,
-.trial-configure-summary__icon svg {
+.trial-configure-summary__icon svg,
+.trial-configure-workload__subsection-icon svg {
   color: inherit;
   display: block;
   width: var(--trial-flavor-icon-size);
@@ -638,6 +733,17 @@
   max-width: 100%;
   max-height: 100%;
   flex-shrink: 0;
+}
+
+/* Select (flavor) cards: match Configure workload icon scale per service */
+.trial-flavor-option-card__icon--models {
+  --trial-flavor-icon-slot: 3.2rem;
+  --trial-flavor-icon-size: 2.85rem;
+}
+
+.trial-flavor-option-card__icon--baremetal {
+  --trial-flavor-icon-slot: 2.35rem;
+  --trial-flavor-icon-size: 1.75rem;
 }
 
 .trial-flavor-option-card__title.pf-v6-c-title,
@@ -683,48 +789,376 @@
   text-align: start;
 }
 
-.trial-configure-summary__tabs.pf-v6-c-tabs {
-  width: 100%;
+.trial-configure-summary--unified {
+  margin-top: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Review step: stacked infra + workload + security (single scroll, skip link to main) */
+.trial-configure-summary--review-stack .trial-configure-summary__review-main {
+  min-width: 0;
+}
+
+.trial-configure-summary--review-stack .trial-configure-summary__review-main:focus {
+  outline: 2px solid var(--pf-t--global--border--color--clicked);
+  outline-offset: 2px;
+}
+
+.trial-configure-summary--review-stack .trial-configure-foundation--secure-compliance {
+  margin-top: var(--pf-t--global--spacer--lg);
+  padding-top: var(--pf-t--global--spacer--lg);
+  border-top: 1px solid var(--trial-border);
+}
+
+/* Configure step — vertical progress stepper + main panel (edit mode) */
+.trial-configure-substep-layout {
+  display: grid;
+  grid-template-columns: minmax(11.5rem, 15rem) minmax(0, 1fr);
+  gap: clamp(var(--pf-t--global--spacer--lg), 3vw, var(--pf-t--global--spacer--2xl));
+  align-items: start;
+}
+
+.trial-configure-substep-rail {
+  position: sticky;
+  top: var(--pf-t--global--spacer--sm);
+  align-self: start;
+  padding-right: var(--pf-t--global--spacer--sm);
+}
+
+.trial-configure-substep-main {
+  min-width: 0;
+}
+
+/* PatternFly ProgressStepper (vertical) — configure rail */
+.trial-configure-pf-stepper.pf-v6-c-progress-stepper {
   margin: 0;
 }
 
-.trial-configure-summary__tabs .pf-v6-c-tabs__list {
-  /* PF can omit visible border when only color is set; force a full-width rule */
-  border-bottom: 1px solid var(--trial-border) !important;
+.trial-configure-pf-step--interactive.pf-v6-c-progress-stepper__step {
+  cursor: pointer;
 }
 
-.trial-configure-summary__tabs .pf-v6-c-tabs__link {
-  font-weight: 400;
+.trial-configure-pf-step--interactive.pf-v6-c-progress-stepper__step:hover {
+  background: var(--pf-t--global--palette--black-100);
+  border-radius: var(--pf-t--global--BorderRadius--md);
 }
 
-.trial-configure-summary__tabs .pf-v6-c-tabs__item-text {
-  font-weight: 400;
-  color: var(--trial-ink);
+.trial-configure-pf-step--interactive.pf-v6-c-progress-stepper__step:focus-within {
+  outline: 2px solid var(--pf-t--global--palette--blue-400);
+  outline-offset: 2px;
+  border-radius: var(--pf-t--global--BorderRadius--md);
+}
+
+.trial-configure-substep__meta {
+  margin: 0 0 var(--pf-t--global--spacer--md);
+  font-size: var(--pf-t--global--FontSize--sm);
+  color: var(--pf-t--global--Color--200);
+}
+
+.trial-configure-summary--substeps .trial-configure-substep-content {
+  min-width: 0;
+}
+
+.trial-configure-substep-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--pf-t--global--spacer--md);
+  margin-top: var(--pf-t--global--spacer--xl);
+  padding-top: var(--pf-t--global--spacer--lg);
+  border-top: 1px solid var(--trial-border);
+}
+
+.trial-configure-substep-footer__completed {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pf-t--global--spacer--sm);
+  min-height: 2.25rem;
+  padding-inline: var(--pf-t--global--spacer--md);
+  font-size: var(--pf-t--global--FontSize--md);
+  font-weight: 600;
+  color: var(--pf-t--global--success-color--200, #1e7f1e);
+}
+
+.trial-configure-substep-footer__completed-icon {
+  flex-shrink: 0;
+  color: var(--pf-t--global--success-color--200, #1e7f1e);
+}
+
+.trial-configure-summary--substeps .trial-configure-foundation--workload {
+  padding-top: var(--pf-t--global--spacer--md);
+  margin-bottom: 0;
+  border-top: none;
+}
+
+.trial-configure-summary--substeps .trial-configure-foundation--infrastructure {
+  margin-bottom: 0;
+}
+
+@media (max-width: 992px) {
+  .trial-configure-substep-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .trial-configure-substep-rail {
+    position: static;
+    padding-right: 0;
+    padding-bottom: var(--pf-t--global--spacer--md);
+    margin-bottom: var(--pf-t--global--spacer--sm);
+  }
+}
+
+.trial-configure-summary--substeps .trial-configure-summary__service-addon {
+  padding-inline-start: 0;
+  border-inline-start: none;
+}
+
+.trial-configure-workload__subsection-head {
+  margin-bottom: 0;
+}
+
+.trial-configure-workload__subsection-head .trial-configure-foundation__service-title {
+  margin-top: 0;
+}
+
+/* Workload tab: tune icon scale vs default Select-matched slot (VM unchanged) */
+.trial-configure-workload__subsection-icon--models {
+  --trial-flavor-icon-slot: 3.2rem;
+  --trial-flavor-icon-size: 2.85rem;
+}
+
+.trial-configure-workload__subsection-icon--baremetal {
+  --trial-flavor-icon-slot: 2.35rem;
+  --trial-flavor-icon-size: 1.75rem;
 }
 
 /*
- * PF Tabs render tabpanels as siblings of .pf-v6-c-tabs, not inside it — so
- * ".trial-configure-summary__tabs [role=tabpanel]" never matched. Target panels
- * under .trial-configure-summary instead.
+ * Infrastructure: one accent rail on the service block below the title (not per subsection).
  */
-.trial-configure-summary .pf-v6-c-tab-content[role="tabpanel"] {
-  margin-top: var(--pf-t--global--spacer--2xs);
-  padding-top: var(--pf-t--global--spacer--sm);
+.trial-configure-foundation--infrastructure > .trial-configure-foundation__infra-body {
+  box-sizing: border-box;
+  margin-block-start: 0;
+  padding-inline-start: 0;
+  border-inline-start: none;
 }
 
-/* Room above the large service icon (e.g. VM as a Service) under service tabs */
-.trial-configure-summary [role="tabpanel"] .trial-configure-summary__title-with-icon {
-  padding-top: var(--pf-t--global--spacer--2xs);
+.trial-configure-foundation--infrastructure
+  > .trial-configure-foundation__infra-body
+  > .trial-configure-summary__service-block {
+  box-sizing: border-box;
+  padding-inline-start: clamp(1rem, 0.75rem + 1.25vw, 1.75rem);
+  border-inline-start: 1px solid var(--trial-border);
+}
+
+/* Basic / Network / Agent hosts: no duplicate left rail inside the shared column. */
+.trial-configure-foundation--infrastructure
+  .trial-configure-foundation__infra-body
+  .trial-configure-summary__vm-subsection,
+.trial-configure-foundation--infrastructure
+  .trial-configure-foundation__infra-body
+  .trial-review-summary__section {
+  padding-inline-start: 0;
+  border-inline-start: none;
+}
+
+/*
+ * Workload: vertical spacing per “as a Service” block; accent rail on body below the h3 title.
+ */
+.trial-configure-foundation--workload .trial-configure-foundation__subsection {
+  box-sizing: border-box;
+  margin-block-start: var(--pf-t--global--spacer--xl);
+  padding-inline-start: 0;
+  border-inline-start: none;
+}
+
+.trial-configure-foundation--workload .trial-configure-foundation__subsection:first-of-type {
+  margin-block-start: 0;
+}
+
+.trial-configure-foundation--workload .trial-configure-service-rail-body {
+  box-sizing: border-box;
+  padding-inline-start: clamp(1rem, 0.75rem + 1.25vw, 1.75rem);
+  border-inline-start: 1px solid var(--trial-border);
+}
+
+.trial-cluster-workload-day2-alert.pf-v6-c-alert {
+  margin-top: 0;
+  margin-bottom: var(--pf-t--global--spacer--md);
+}
+
+/*
+ * Security & Compliance review: accent rail only for Data residency → Security controls
+ * (main “Security & Compliance” title sits outside the rail).
+ */
+.trial-configure-foundation--secure-compliance .trial-secure-comply-review__rail {
+  box-sizing: border-box;
+  margin-top: var(--pf-t--global--spacer--md);
+  padding-inline-start: clamp(1rem, 0.75rem + 1.25vw, 1.75rem);
+  border-inline-start: 1px solid var(--trial-border);
+}
+
+.trial-configure-foundation--secure-compliance
+  .trial-secure-comply-review__rail
+  .trial-secure-comply-review__section:first-of-type
+  .trial-configure-summary__subsection-title {
+  margin-top: 0;
+}
+
+.trial-configure-foundation--secure-compliance {
+  margin-bottom: 0;
+}
+
+.trial-configure-foundation {
+  margin-bottom: var(--pf-t--global--spacer--2xl);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.trial-configure-foundation--workload {
+  padding-top: var(--pf-t--global--spacer--lg);
+  margin-bottom: 0;
+  border-top: 1px solid var(--trial-border);
+}
+
+.trial-configure-foundation__title {
+  margin: 0 0 var(--pf-t--global--spacer--md);
+  font-weight: 500 !important;
+}
+
+.trial-configure-foundation__service-title {
+  margin: var(--pf-t--global--spacer--lg) 0 var(--pf-t--global--spacer--md);
+}
+
+.trial-configure-foundation__subsection:first-of-type
+  .trial-configure-foundation__service-title {
+  margin-top: 0;
+}
+
+.trial-configure-foundation__field-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--pf-t--global--spacer--md);
+}
+
+@media (min-width: 36rem) {
+  .trial-configure-foundation__field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trial-configure-foundation__field-grid--vm-workload .trial-workload-vm-base-url {
+    grid-column: 1 / -1;
+  }
+}
+
+.trial-configure-foundation__muted-label {
+  margin: 0 0 var(--pf-t--global--spacer--sm);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--trial-ink);
+}
+
+.trial-workload-model-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pf-t--global--spacer--sm);
+  margin-bottom: var(--pf-t--global--spacer--md);
+}
+
+.trial-workload-models-config .trial-workload-models-group + .trial-workload-models-group {
+  margin-top: var(--pf-t--global--spacer--lg);
+  padding-top: var(--pf-t--global--spacer--lg);
+  border-top: 1px solid var(--trial-border);
+}
+
+.trial-workload-models-config .trial-workload-models-group .trial-configure-foundation__muted-label {
+  margin: 0 0 var(--pf-t--global--spacer--xs);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--trial-muted, #737373);
+}
+
+.trial-workload-models-config .trial-workload-model-checkboxes {
+  margin-bottom: 0;
+  gap: var(--pf-t--global--spacer--xs);
+}
+
+.trial-workload-models-config .trial-workload-models-runtime {
+  margin-top: var(--pf-t--global--spacer--lg);
+  padding-top: var(--pf-t--global--spacer--lg);
+  border-top: 1px solid var(--trial-border);
+}
+
+.trial-workload-models-config .trial-workload-models-runtime .pf-v6-c-form__group {
+  margin-bottom: 0;
+  max-width: min(100%, 28rem);
+}
+
+.trial-workload-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  color: var(--trial-ink);
+}
+
+.trial-workload-checkbox-row__input {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.trial-workload-gpu-row {
+  margin-top: var(--pf-t--global--spacer--sm);
+}
+
+.trial-configure-foundation__select {
+  width: 100%;
+  max-width: 24rem;
+  min-height: 2.25rem;
+  border-radius: 6px;
+  border: 1px solid var(--trial-border);
+  padding-block: 0.35rem;
+  padding-inline-start: 0.65rem;
+  /* Room for the native dropdown indicator (PF grid layout is for wrapper + child select, not select alone). */
+  padding-inline-end: 2.25rem;
+  font: inherit;
+  color: var(--trial-ink);
+  background: #fff;
+}
+
+/*
+ * PF FormControl expects a wrapper `.pf-v6-c-form-control` with a nested `select`.
+ * We attach the class to the `<select>` itself for validation styling; without this
+ * reset, `display: grid` + `1fr auto` misplaces the disclosure chevron at the edge.
+ */
+select.trial-configure-foundation__select.pf-v6-c-form-control {
+  display: block;
+  grid-template-columns: unset;
+  column-gap: normal;
+  align-items: stretch;
+  appearance: auto;
+  -webkit-appearance: menulist-button;
+}
+
+select.trial-configure-foundation__select.pf-v6-c-form-control::before,
+select.trial-configure-foundation__select.pf-v6-c-form-control::after {
+  content: none;
+  display: none;
+}
+
+.trial-configure-foundation__empty-hint {
+  margin: 0;
+  color: var(--trial-muted);
+  line-height: 1.55;
+  max-width: 48rem;
 }
 
 .trial-configure-summary__block {
   width: 100%;
   max-width: none;
   padding-block: var(--pf-t--global--spacer--2xs);
-}
-
-.trial-configure-summary [role="tabpanel"] .trial-configure-summary__block {
-  padding-top: var(--pf-t--global--spacer--2xs);
 }
 
 /* Icon stacked above the service name */
@@ -767,9 +1201,16 @@
   margin-top: var(--pf-t--global--spacer--md);
 }
 
+/*
+ * Configure / review: h4 section labels (Basic, Platform settings, Cluster nodes, etc.)
+ * — compact so they stay clearly under h2/h3 service titles.
+ */
 .trial-configure-summary__subsection-title.pf-v6-c-title {
-  margin: 0 0 var(--pf-t--global--spacer--sm);
-  font-weight: 500;
+  margin: 0 0 var(--pf-t--global--spacer--md);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
   color: var(--trial-ink);
 }
 
@@ -834,6 +1275,11 @@
   gap: 0;
 }
 
+/* Cluster workload: gap after last node card before “High availability” */
+.trial-configure-summary__vm-agent-hosts + .trial-configure-foundation__muted-label {
+  margin-top: var(--pf-t--global--spacer--xl);
+}
+
 .trial-configure-summary__vm-host-card + .trial-configure-summary__vm-host-card {
   margin-top: var(--pf-t--global--spacer--lg);
   padding-top: var(--pf-t--global--spacer--lg);
@@ -886,7 +1332,18 @@
   color: var(--pf-t--global--text--Color--100, #151515);
 }
 
+/*
+ * Configure step: required asterisk (PF FormGroup isRequired) — brand red on the whole card
+ * (infrastructure rail + workload blocks).
+ */
+.trial-wizard-surface--configure-card .pf-v6-c-form__label-required,
 .trial-configure-summary__service-block .pf-v6-c-form__label-required {
+  color: var(--trial-brand-red) !important;
+  font-weight: 700;
+}
+
+/* Section labels outside FormGroup (e.g. checkbox group headings) — paired with .trial-configure-required-mark */
+.trial-configure-required-mark {
   color: var(--trial-brand-red);
   font-weight: 700;
 }
@@ -898,11 +1355,18 @@
   font-size: 0.875rem;
 }
 
-.trial-configure-summary__service-block .pf-v6-c-form-control {
+.trial-configure-summary__service-block .pf-v6-c-form-control,
+.trial-configure-foundation--workload .pf-v6-c-form-control {
   --pf-v6-c-form-control--BackgroundColor: #f0f0f0;
   /* Match border to fill so the control reads as a soft gray block */
   --pf-v6-c-form-control--before--BorderColor: #f0f0f0;
   width: 100%;
+}
+
+/* Bare Metal boot select: undo white fill from .trial-configure-foundation__select so it matches infra */
+.trial-configure-foundation--workload .trial-configure-foundation__select.pf-v6-c-form-control {
+  background-color: #f0f0f0;
+  border-color: #f0f0f0;
 }
 
 /* Review step: scan-friendly label / value pairs (no inputs) */
@@ -916,10 +1380,6 @@
 
 .trial-review-summary__section:first-child {
   margin-top: 0;
-}
-
-.trial-review-summary__section-title.pf-v6-c-title {
-  margin: 0 0 var(--pf-t--global--spacer--sm);
 }
 
 .trial-review-summary__rows {
@@ -970,8 +1430,23 @@
   border-top: none;
 }
 
+/* Review cluster nodes: first card follows “Cluster nodes” heading, not :first-child of the rail */
+.trial-configure-summary__subsection-title + .trial-review-summary__host-block {
+  padding-top: 0;
+  border-top: none;
+}
+
 .trial-review-summary__host-title.pf-v6-c-title {
   margin: 0 0 var(--pf-t--global--spacer--sm);
+}
+
+/* Review — cluster: space above “High availability” after the last node card */
+.trial-configure-foundation__workload-readonly
+  .trial-review-summary__host-block
+  + .trial-configure-foundation__muted-label {
+  margin-block-start: var(--pf-t--global--spacer--xl);
+  margin-inline: 0;
+  margin-block-end: var(--pf-t--global--spacer--sm);
 }
 
 .trial-artifact-success {
@@ -988,7 +1463,9 @@
   width: 100%;
   max-width: 100%;
   margin-inline: 0;
-  padding: var(--pf-t--global--spacer--md) var(--pf-t--global--spacer--lg);
+  padding-block-start: var(--pf-t--global--spacer--xl);
+  padding-inline: var(--pf-t--global--spacer--lg);
+  padding-block-end: var(--pf-t--global--spacer--md);
   text-align: center;
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--trial-border) 85%, transparent);
@@ -1003,50 +1480,79 @@
     0 6px 18px -10px color-mix(in srgb, #0a0a0a 10%, transparent);
 }
 
-.trial-artifact-success__success-icon {
-  margin: 0 0 var(--pf-t--global--spacer--sm);
-}
-
-.trial-artifact-success__iso-name {
-  margin: 0 0 var(--pf-t--global--spacer--sm);
-  font-family: var(--pf-t--global--font--family--mono);
-  font-size: 0.9375rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  line-height: 1.35;
-  text-align: center;
-  color: var(--trial-ink, #151515);
-  word-break: break-all;
-}
-
-.trial-artifact-success__pills {
-  row-gap: var(--pf-t--global--spacer--sm);
-}
-
-/* White pills in the download hero (replacing dark grey PatternFly labels) */
-.trial-artifact-success__pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.trial-artifact-success__provenance {
   box-sizing: border-box;
-  min-height: 1.375rem;
-  padding: 0.125rem 0.625rem;
-  border-radius: 9999px;
-  background: #fff;
-  border: 1px solid color-mix(in srgb, var(--trial-border, #d0d0d0) 92%, #000);
-  color: var(--trial-ink, #151515);
+  width: 100%;
+  max-width: 40rem;
+  margin-inline: auto;
+  text-align: center;
+  color: var(--pf-t--global--text--color--status--success--default, #1e7f34);
+}
+
+.trial-artifact-success__provenance-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--pf-t--global--spacer--lg);
+  text-align: center;
+}
+
+.trial-artifact-success__provenance-item {
+  margin: 0;
+  flex: 1 1 11rem;
+  max-width: 19rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.trial-artifact-success__provenance-item--sbom {
+  flex: 0 1 auto;
+  max-width: none;
+}
+
+.trial-artifact-success__provenance-item--sbom
+  .trial-artifact-success__provenance-item-title {
+  white-space: nowrap;
+}
+
+.trial-artifact-success__provenance-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-bottom: var(--pf-t--global--spacer--xs);
+  color: var(--pf-t--global--icon--color--status--success--default, #3e8635);
+}
+
+.trial-artifact-success__provenance-item-title {
+  font-size: var(--pf-t--global--font--size--body--default, 0.875rem);
+  font-weight: 600;
+  line-height: 1.35;
+  color: inherit;
+}
+
+.trial-artifact-success__provenance-item-desc {
+  margin: var(--pf-t--global--spacer--xs) 0 0;
   font-size: var(--pf-t--global--font--size--body--sm, 0.75rem);
-  font-weight: 500;
-  line-height: 1.25;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.95) inset,
-    0 1px 2px rgba(0, 0, 0, 0.04);
+  line-height: 1.45;
+  color: color-mix(
+    in srgb,
+    var(--pf-t--global--text--color--status--success--default, #1e7f34) 82%,
+    var(--trial-ink, #151515) 18%
+  );
 }
 
 .trial-artifact-success__cta {
-  margin-top: var(--pf-t--global--spacer--md);
+  margin-top: var(--pf-t--global--spacer--lg);
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
+  gap: var(--pf-t--global--spacer--sm);
 }
 
 .trial-artifact-success__cta .pf-v6-c-button {
@@ -1085,4 +1591,600 @@
   margin: 0;
   max-width: 48rem;
   line-height: 1.5;
+}
+
+/* Secure & Comply step */
+.trial-secure-comply {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  text-align: start;
+}
+
+.trial-secure-comply__section {
+  box-sizing: border-box;
+  margin-bottom: var(--pf-t--global--spacer--2xl);
+  padding-inline-start: clamp(1rem, 0.75rem + 1.25vw, 1.75rem);
+  border-inline-start: 1px solid
+    color-mix(in srgb, var(--trial-border) 82%, transparent);
+}
+
+.trial-secure-comply__section:last-child {
+  margin-bottom: 0;
+}
+
+/* Secure & Comply — Review tab read-only summary */
+.trial-secure-comply-review {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  text-align: start;
+}
+
+.trial-secure-comply-review__section {
+  margin-bottom: var(--pf-t--global--spacer--2xl);
+}
+
+.trial-secure-comply-review__section:last-child {
+  margin-bottom: 0;
+}
+
+.trial-secure-comply-review__empty {
+  margin: var(--pf-t--global--spacer--sm) 0 0;
+  color: var(--trial-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.trial-secure-comply-review__region-list,
+.trial-secure-comply-review__framework-list {
+  margin: var(--pf-t--global--spacer--sm) 0 0;
+  padding-left: 1.25rem;
+  color: var(--trial-ink);
+}
+
+.trial-secure-comply-review__region-item,
+.trial-secure-comply-review__framework-item {
+  margin-top: var(--pf-t--global--spacer--md);
+  line-height: 1.45;
+}
+
+.trial-secure-comply-review__region-item:first-child,
+.trial-secure-comply-review__framework-item:first-child {
+  margin-top: 0;
+}
+
+.trial-secure-comply-review__region-title,
+.trial-secure-comply-review__framework-name {
+  display: block;
+  font-weight: 600;
+  color: var(--trial-ink);
+}
+
+.trial-secure-comply-review__region-detail,
+.trial-secure-comply-review__framework-desc {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.875rem;
+  color: var(--trial-muted);
+}
+
+.trial-secure-comply__section-title.pf-v6-c-title {
+  margin: 0 0 var(--pf-t--global--spacer--sm);
+  font-weight: 500 !important;
+  color: var(--trial-ink);
+}
+
+.trial-secure-comply__required-asterisk {
+  margin-left: 0.12em;
+  font-weight: 700;
+  color: var(--pf-t--global--danger-color--100, #c9190b);
+}
+
+.trial-secure-comply__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.trial-secure-comply__lead {
+  margin: 0 0 var(--pf-t--global--spacer--md);
+  color: var(--trial-muted);
+  font-size: 1rem;
+  line-height: 1.55;
+  max-width: 52rem;
+}
+
+.trial-secure-comply__lead--data-residency {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.trial-secure-comply__lead--sm {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.trial-secure-comply .pf-v6-c-form__group {
+  margin-bottom: 0;
+}
+
+.trial-secure-comply .pf-v6-c-form__label {
+  font-weight: 600;
+  color: var(--trial-ink);
+}
+
+.trial-secure-comply__data-residency-map-wrap {
+  position: relative;
+  margin-bottom: var(--pf-t--global--spacer--md);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--trial-border) 90%, transparent);
+  background: #e4e7eb;
+  width: 100%;
+  height: min(28rem, 62vh);
+  min-height: 10rem;
+  line-height: 0;
+}
+
+.trial-data-residency-map-filter-svg {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.trial-data-residency-world-map-img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Anchor to top so northern landmasses stay in view when the frame crops vertically */
+  object-position: center top;
+}
+
+.trial-data-residency-map-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Macro palette: map pegs, legend, and region cards */
+.trial-data-residency-macro--americas {
+  --drm-accent: #2b6cb0;
+  --drm-accent-soft: color-mix(in srgb, var(--drm-accent) 10%, #ffffff);
+  --drm-accent-ring: color-mix(in srgb, var(--drm-accent) 24%, transparent);
+}
+
+.trial-data-residency-macro--americas-south {
+  --drm-accent: #e53e3e;
+  --drm-accent-soft: color-mix(in srgb, var(--drm-accent) 10%, #ffffff);
+  --drm-accent-ring: color-mix(in srgb, var(--drm-accent) 24%, transparent);
+}
+
+.trial-data-residency-macro--europe {
+  --drm-accent: #2f855a;
+  --drm-accent-soft: color-mix(in srgb, var(--drm-accent) 10%, #ffffff);
+  --drm-accent-ring: color-mix(in srgb, var(--drm-accent) 24%, transparent);
+}
+
+.trial-data-residency-macro--asia-pacific {
+  --drm-accent: #dd6b20;
+  --drm-accent-soft: color-mix(in srgb, var(--drm-accent) 10%, #ffffff);
+  --drm-accent-ring: color-mix(in srgb, var(--drm-accent) 24%, transparent);
+}
+
+.trial-data-residency-macro--mea {
+  --drm-accent: #6b46c1;
+  --drm-accent-soft: color-mix(in srgb, var(--drm-accent) 10%, #ffffff);
+  --drm-accent-ring: color-mix(in srgb, var(--drm-accent) 24%, transparent);
+}
+
+.trial-data-residency-map-legend {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 0.5rem;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem 1.35rem;
+  margin: 0;
+  padding: 0.45rem 1.05rem;
+  list-style: none;
+  max-width: calc(100% - 1rem);
+  border-radius: 999px;
+  background: color-mix(in srgb, #ffffff 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--trial-border) 55%, transparent);
+  box-shadow: 0 2px 5px color-mix(in srgb, #000000 10%, transparent);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--trial-ink);
+  pointer-events: none;
+}
+
+.trial-data-residency-map-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.trial-data-residency-map-legend__dot {
+  display: block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--drm-accent);
+  box-shadow: 0 1px 3px color-mix(in srgb, #000000 24%, transparent);
+  flex-shrink: 0;
+}
+
+.trial-data-residency-map-legend__label {
+  white-space: nowrap;
+}
+
+.trial-data-residency-map-point {
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.trial-data-residency-map-point:focus {
+  outline: none;
+}
+
+.trial-data-residency-map-point:focus-visible .trial-data-residency-map-point__hit {
+  stroke: var(--trial-primary, #0066cc);
+  stroke-width: 2;
+  fill: color-mix(in srgb, var(--trial-primary, #0066cc) 12%, transparent);
+}
+
+.trial-data-residency-map-point__hit {
+  fill: transparent;
+  stroke: transparent;
+}
+
+.trial-data-residency-map-point:hover .trial-data-residency-map-point__hit {
+  fill: color-mix(in srgb, var(--drm-accent, var(--trial-primary, #0066cc)) 12%, transparent);
+  stroke: color-mix(in srgb, var(--drm-accent, var(--trial-primary, #0066cc)) 28%, transparent);
+  stroke-width: 1;
+}
+
+.trial-data-residency-map-point__peg {
+  fill: var(--drm-accent);
+  stroke: color-mix(in srgb, #000000 14%, transparent);
+  stroke-width: 0.55;
+}
+
+.trial-data-residency-map-point__badge {
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: trial-data-residency-marker-pop 0.42s cubic-bezier(0.33, 1.4, 0.64, 1) both;
+}
+
+.trial-data-residency-map-point__ring {
+  vector-effect: non-scaling-stroke;
+}
+
+.trial-data-residency-map-point__tick {
+  vector-effect: non-scaling-stroke;
+  paint-order: stroke fill;
+  stroke: #ffffff;
+  filter: drop-shadow(0 0 1px color-mix(in srgb, #000000 35%, transparent));
+}
+
+/* Persistent region tooltip when selected: dark panel, white type, tail toward peg (hover = <title>) */
+.trial-data-residency-map-point__sticky {
+  pointer-events: none;
+}
+
+.trial-data-residency-map-point__sticky-shell {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: 100%;
+  font-family: var(
+    --pf-t--global--font--family--text,
+    "Red Hat Text",
+    system-ui,
+    sans-serif
+  );
+}
+
+.trial-data-residency-map-point__sticky-panel {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.65rem 0.85rem 0.6rem;
+  border-radius: 10px;
+  background: #2b2f33;
+  color: #ffffff;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.trial-data-residency-map-point__sticky-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #ffffff;
+}
+
+.trial-data-residency-map-point__sticky-detail {
+  margin-top: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.92);
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  word-break: break-word;
+}
+
+.trial-data-residency-map-point__sticky-arrow {
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  margin-top: -1px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 9px solid #2b2f33;
+  filter: drop-shadow(0 5px 6px rgba(0, 0, 0, 0.22));
+}
+
+@keyframes trial-data-residency-marker-pop {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.1);
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.trial-data-residency-region-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--pf-t--global--spacer--sm);
+  margin-top: var(--pf-t--global--spacer--md);
+}
+
+@media (min-width: 36rem) {
+  .trial-data-residency-region-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 62rem) {
+  .trial-data-residency-region-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.trial-data-residency-region {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--trial-border) 88%, transparent);
+  background: #fafafa;
+  color: var(--trial-ink);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  transition:
+    border-color 0.15s ease,
+    border-width 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.trial-data-residency-region:hover {
+  border-color: color-mix(in srgb, var(--drm-accent) 42%, var(--trial-border));
+}
+
+.trial-data-residency-region:focus-visible {
+  outline: 2px solid var(--trial-primary, #0066cc);
+  outline-offset: 2px;
+}
+
+/* Match Select (flavor) cards: primary border, tint, shadow, and “Selected” chip */
+.trial-data-residency-region.is-selected {
+  padding-right: 4.5rem;
+  border-color: var(--trial-primary, #0066cc) !important;
+  border-width: 2px;
+  box-shadow:
+    0 0 0 1px rgba(0, 102, 204, 0.12),
+    0 4px 12px rgba(0, 102, 204, 0.08);
+  background-color: rgba(0, 102, 204, 0.06);
+}
+
+.trial-data-residency-region.is-selected:hover {
+  border-color: var(--trial-primary, #0066cc) !important;
+}
+
+/* Selected: badge steals width — keep copy to two lines total (title + one detail line, ellipsis) */
+.trial-data-residency-region.is-selected .trial-data-residency-region__detail {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.trial-data-residency-region__head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.28rem;
+  min-width: 0;
+  /* Title uses remaining width so it ellipsizes before the Selected badge */
+  padding-right: 0.15rem;
+}
+
+.trial-data-residency-region__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 0.875rem;
+  flex-shrink: 0;
+}
+
+.trial-data-residency-region__peg {
+  display: block;
+  width: 0.6875rem;
+  height: 0.6875rem;
+  border-radius: 50%;
+  background: var(--drm-accent);
+  box-shadow: 0 1px 2px color-mix(in srgb, #000000 22%, transparent);
+  flex-shrink: 0;
+}
+
+.trial-data-residency-region__title {
+  flex: 1 1 0%;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--trial-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trial-data-residency-region__detail {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--trial-muted);
+  line-height: 1.32;
+  /* Align with title: mark column + head gap — tighter than before so copy sits left */
+  padding-left: calc(0.875rem + 0.28rem);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  text-overflow: ellipsis;
+}
+
+.trial-secure-comply__framework-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--pf-t--global--spacer--md);
+  align-items: stretch;
+}
+
+@media (min-width: 36rem) {
+  .trial-secure-comply__framework-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--pf-t--global--spacer--lg);
+    row-gap: var(--pf-t--global--spacer--md);
+  }
+}
+
+.trial-secure-comply__framework {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  min-width: 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: var(--pf-t--global--spacer--sm) var(--pf-t--global--spacer--md);
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--trial-border) 88%, transparent);
+  background: #fafafa;
+}
+
+.trial-secure-comply__framework-input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.trial-secure-comply__framework-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.trial-secure-comply__framework-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--trial-ink);
+  line-height: 1.45;
+}
+
+.trial-secure-comply__framework-desc {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--trial-muted);
+  line-height: 1.45;
+}
+
+.trial-secure-comply__control-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pf-t--global--spacer--sm);
+}
+
+.trial-secure-comply__control {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  color: var(--trial-ink);
+}
+
+.trial-secure-comply__control-input {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.trial-secure-comply__control-label {
+  line-height: 1.45;
+}
+
+.trial-secure-comply__control-hint {
+  font-weight: 400;
+  color: var(--trial-muted);
 }

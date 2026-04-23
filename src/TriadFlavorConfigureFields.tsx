@@ -10,7 +10,7 @@ import type { SovereignFlavorId } from "./SovereignFlavorCards";
 
 export type TriadFlavorId = "vm" | "cluster" | "baremetal";
 
-type ConfigureLayout = "full" | "basicNetwork" | "basic";
+type ConfigureLayout = "full" | "basic";
 
 export type AgentHost = {
   id: string;
@@ -23,6 +23,16 @@ export type AgentHost = {
   redfishPassword: string;
 };
 
+/** Cluster as a Service — workload tab (cluster nodes). */
+export type ClusterWorkloadNode = {
+  id: string;
+  name: string;
+  nodeRole: string;
+  cpuCores: string;
+  memoryGb: string;
+  storageGb: string;
+};
+
 export type FormState = {
   baseDomain: string;
   serviceName: string;
@@ -30,7 +40,82 @@ export type FormState = {
   ingressVip: string;
   machineNetwork: string;
   hosts: AgentHost[];
+  /** VM as a Service — workload */
+  baseUrl: string;
+  organization: string;
+  storagePolicy: string;
+  /** Bare Metal as a Service — workload */
+  provisioningNetwork: string;
+  bootMode: string;
+  /** Model as a Service — Red Hat validated models */
+  modelIbmGranite: boolean;
+  modelMetaLlama3: boolean;
+  modelMistralAi: boolean;
+  modelMixtral8x7b: boolean;
+  /** Model as a Service — GPU acceleration options */
+  gpuInstallNvidiaDrivers: boolean;
+  gpuInstallCudaToolkit: boolean;
+  /** Model as a Service — inference runtime identifier */
+  modelRuntime: string;
+  /** Cluster as a Service — workload (cluster nodes + HA options) */
+  clusterWorkloadNodes: ClusterWorkloadNode[];
+  clusterHaEnabled: boolean;
+  clusterAutoscaleEnabled: boolean;
 };
+
+function workloadDefaults(): Pick<
+  FormState,
+  | "baseUrl"
+  | "organization"
+  | "storagePolicy"
+  | "provisioningNetwork"
+  | "bootMode"
+  | "modelIbmGranite"
+  | "modelMetaLlama3"
+  | "modelMistralAi"
+  | "modelMixtral8x7b"
+  | "gpuInstallNvidiaDrivers"
+  | "gpuInstallCudaToolkit"
+  | "modelRuntime"
+  | "clusterWorkloadNodes"
+  | "clusterHaEnabled"
+  | "clusterAutoscaleEnabled"
+> {
+  return {
+    baseUrl: "https://api.mgmt.example.com/v1",
+    organization: "",
+    storagePolicy: "",
+    provisioningNetwork: "",
+    bootMode: "UEFI",
+    modelIbmGranite: true,
+    modelMetaLlama3: true,
+    modelMistralAi: true,
+    modelMixtral8x7b: true,
+    gpuInstallNvidiaDrivers: true,
+    gpuInstallCudaToolkit: true,
+    modelRuntime: "",
+    clusterWorkloadNodes: [],
+    clusterHaEnabled: true,
+    clusterAutoscaleEnabled: true,
+  };
+}
+
+export function mergeConfigureForm(
+  flavorId: SovereignFlavorId,
+  forms: Partial<Record<SovereignFlavorId, FormState>>,
+): FormState {
+  return { ...initialFormState(flavorId), ...forms[flavorId] };
+}
+
+/** Which flavor backs the shared “Infrastructure” block. */
+export function infrastructureFlavorIdForConfigure(
+  selected: ReadonlySet<SovereignFlavorId>,
+): SovereignFlavorId | null {
+  if (selected.has("cluster")) return "cluster";
+  if (selected.has("vm")) return "vm";
+  if (selected.has("baremetal")) return "baremetal";
+  return null;
+}
 
 export type ConfigureValidationIssue = {
   flavorId: SovereignFlavorId;
@@ -43,10 +128,7 @@ export function configureLayoutFor(id: SovereignFlavorId): ConfigureLayout {
     case "cluster":
     case "baremetal":
       return "full";
-    case "network":
-      return "basicNetwork";
     case "models":
-    case "container":
       return "basic";
     default: {
       const _exhaustive: never = id;
@@ -76,17 +158,78 @@ function newHostId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function newClusterWorkloadNodeId(): string {
+  return `cl-node-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export function createClusterWorkloadNode(index: number): ClusterWorkloadNode {
+  return {
+    id: newClusterWorkloadNodeId(),
+    name: `cluster-node-${String(index + 1).padStart(2, "0")}`,
+    nodeRole: index === 0 ? "control-plane" : "worker",
+    cpuCores: String(4 + (index % 3) * 4),
+    memoryGb: String(16 + index * 8),
+    storageGb: String(100 + index * 100),
+  };
+}
+
 function randomOctet(min = 20, max = 220): number {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
-function makeVmHost1(): AgentHost {
+/** Third IPv4 octet from `192.168.x.0/24`-style machine network; fallback if unparsable. */
+function thirdOctetFromMachineNetwork(machineNetwork: string): number {
+  const m = machineNetwork
+    .trim()
+    .match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.0\/\d+$/);
+  if (m) {
+    const n = Number(m[3]);
+    if (n >= 0 && n <= 255) {
+      return n;
+    }
+  }
+  return randomOctet(2, 250);
+}
+
+const VM_ORG_PREFIXES = [
+  "northwind",
+  "acme",
+  "contoso",
+  "globex",
+  "initech",
+  "umbrella",
+] as const;
+
+const VM_ORG_SUFFIXES = ["-labs", "-platform", "-infra", "-cloud", ""] as const;
+
+function randomVmOrganization(): string {
+  const p = VM_ORG_PREFIXES[Math.floor(Math.random() * VM_ORG_PREFIXES.length)];
+  const s = VM_ORG_SUFFIXES[Math.floor(Math.random() * VM_ORG_SUFFIXES.length)];
+  const n = Math.floor(Math.random() * 900 + 100);
+  return `${p}${s}-${n}`;
+}
+
+const VM_STORAGE_POLICIES = [
+  "ceph-rbd-gold",
+  "ssd-premium-default",
+  "tiered-warm-archive",
+  "nfs-backup-retain-30d",
+  "local-lvm-provisioned",
+  "thin-replicated-ssd",
+] as const;
+
+function randomVmStoragePolicy(): string {
+  return VM_STORAGE_POLICIES[Math.floor(Math.random() * VM_STORAGE_POLICIES.length)];
+}
+
+function makeVmHost1(lanThirdOctet: number): AgentHost {
+  const last = randomOctet(12, 90);
   return {
     id: "agent-host-vm-1",
     name: "mgmt-ctl01",
     mac: "0c:c4:7a:62:fe:ec",
-    ip: "192.168.2.24",
-    redfish: "100.64.1.24",
+    ip: `192.168.${lanThirdOctet}.${last}`,
+    redfish: `100.64.1.${randomOctet(10, 240)}`,
     rootDisk: "/dev/disk/by-path/pci-0000:0011.4-ata-1.0",
     redfishUser: "admin",
     redfishPassword: "SecureBmcPlaceholder1!",
@@ -101,7 +244,11 @@ function hostNameFor(flavor: TriadFlavorId, hostNumber: number): string {
   return `mgmt-ctl${suffix}`;
 }
 
-function makeRandomHost(flavor: TriadFlavorId, hostNumber: number): AgentHost {
+function makeRandomHost(
+  flavor: TriadFlavorId,
+  hostNumber: number,
+  lanThirdOctet: number,
+): AgentHost {
   const ipLast = randomOctet();
   const rfLast = randomOctet(10, 240);
   const pci = (0x10 + Math.floor(Math.random() * 12)).toString(16);
@@ -110,7 +257,7 @@ function makeRandomHost(flavor: TriadFlavorId, hostNumber: number): AgentHost {
     id: `agent-host-${flavor}-${newHostId()}`,
     name: hostNameFor(flavor, hostNumber),
     mac: randomMac(),
-    ip: `192.168.2.${ipLast}`,
+    ip: `192.168.${lanThirdOctet}.${ipLast}`,
     redfish: `100.64.1.${rfLast}`,
     rootDisk: `/dev/disk/by-path/pci-0000:${pci}.4-ata-${ata}.0`,
     redfishUser: "admin",
@@ -139,82 +286,63 @@ function initialBasicTriad(flavor: TriadFlavorId): {
   };
 }
 
-function initialNetworkRandom(): {
+/** Random RFC1918-style /24 for Infrastructure (VIP + machine network + host IPs stay aligned). */
+function randomInfrastructureNetwork(): {
   apiVip: string;
   ingressVip: string;
   machineNetwork: string;
+  lanThirdOctet: number;
 } {
-  let a = randomOctet(180, 230);
-  let b = randomOctet(180, 230);
+  const lanThirdOctet = randomOctet(2, 250);
+  let a = randomOctet(100, 230);
+  let b = randomOctet(100, 230);
   while (b === a) {
-    b = randomOctet(180, 230);
+    b = randomOctet(100, 230);
   }
-  const third = Math.floor(Math.random() * 4) + 1;
   return {
-    apiVip: `192.168.2.${a}`,
-    ingressVip: `192.168.2.${b}`,
-    machineNetwork: `192.168.${third}.0/24`,
+    apiVip: `192.168.${lanThirdOctet}.${a}`,
+    ingressVip: `192.168.${lanThirdOctet}.${b}`,
+    machineNetwork: `192.168.${lanThirdOctet}.0/24`,
+    lanThirdOctet,
   };
 }
 
-function initialNetworkTriad(flavor: TriadFlavorId): {
-  apiVip: string;
-  ingressVip: string;
-  machineNetwork: string;
-} {
-  if (flavor === "vm") {
-    return {
-      apiVip: "192.168.2.201",
-      ingressVip: "192.168.2.202",
-      machineNetwork: "192.168.2.0/24",
-    };
-  }
-  return initialNetworkRandom();
-}
-
-function initialHostsTriad(flavor: TriadFlavorId): AgentHost[] {
-  const hosts =
-    flavor === "vm"
-      ? [makeVmHost1(), makeRandomHost("vm", 2)]
-      : [makeRandomHost(flavor, 1), makeRandomHost(flavor, 2)];
-  /* Demo: only Cluster — Host 1 IP unset until the user fills it (Next-step validation). */
-  if (flavor === "cluster") {
-    const first = hosts[0];
-    if (first) {
-      hosts[0] = { ...first, ip: "" };
-    }
-  }
-  return hosts;
+function initialHostsTriad(flavor: TriadFlavorId, lanThirdOctet: number): AgentHost[] {
+  return flavor === "vm"
+    ? [makeVmHost1(lanThirdOctet)]
+    : [makeRandomHost(flavor, 1, lanThirdOctet)];
 }
 
 function initialTriadFormState(flavor: TriadFlavorId): FormState {
+  const net = randomInfrastructureNetwork();
+  const workload = workloadDefaults();
+  if (flavor === "cluster") {
+    workload.clusterWorkloadNodes = [createClusterWorkloadNode(0)];
+  }
+  if (flavor === "vm") {
+    workload.organization = randomVmOrganization();
+    workload.storagePolicy = randomVmStoragePolicy();
+  }
+  if (flavor === "baremetal") {
+    workload.provisioningNetwork = net.machineNetwork;
+    workload.bootMode = Math.random() < 0.5 ? "UEFI" : "Legacy BIOS";
+  }
   return {
     ...initialBasicTriad(flavor),
-    ...initialNetworkTriad(flavor),
-    hosts: initialHostsTriad(flavor),
+    apiVip: net.apiVip,
+    ingressVip: net.ingressVip,
+    machineNetwork: net.machineNetwork,
+    hosts: initialHostsTriad(flavor, net.lanThirdOctet),
+    ...workload,
   };
 }
 
-function initialSoloBasic(
-  flavor: "models" | "container" | "network",
-): Pick<FormState, "baseDomain" | "serviceName"> {
+function initialModelsBasic(): Pick<FormState, "baseDomain" | "serviceName"> {
   const tok = Math.random().toString(36).slice(2, 8);
   const n = Math.floor(Math.random() * 800 + 100);
-  if (flavor === "models") {
-    return {
-      baseDomain: `models-${tok}.nodns.in`,
-      serviceName: `infer-svc-${n}`,
-    };
-  }
-  if (flavor === "container") {
-    return {
-      baseDomain: `apps-${tok}.nodns.in`,
-      serviceName: `tenant-${n}`,
-    };
-  }
   return {
-    baseDomain: `vpc-${tok}.nodns.in`,
-    serviceName: `net-core-${n}`,
+    baseDomain: `models-${tok}.nodns.in`,
+    serviceName: `infer-svc-${n}`,
   };
 }
 
@@ -223,30 +351,54 @@ export function initialFormState(flavorId: SovereignFlavorId): FormState {
   if (mode === "full") {
     return initialTriadFormState(flavorId as TriadFlavorId);
   }
-  if (mode === "basicNetwork") {
-    return {
-      ...initialSoloBasic("network"),
-      ...initialNetworkRandom(),
-      hosts: [],
-    };
-  }
+  const tok = Math.random().toString(36).slice(2, 7);
   return {
-    ...initialSoloBasic(flavorId as "models" | "container"),
+    ...initialModelsBasic(),
     apiVip: "",
     ingressVip: "",
     machineNetwork: "",
     hosts: [],
+    ...workloadDefaults(),
+    modelRuntime: `vLLM 0.5.3 + Triton (${tok})`,
   };
 }
 
+export function validationClusterWorkloadMessages(form: FormState): string[] {
+  const messages: string[] = [];
+  if (form.clusterWorkloadNodes.length === 0) {
+    messages.push("Add at least one cluster node.");
+    return messages;
+  }
+  form.clusterWorkloadNodes.forEach((n, index) => {
+    const h = index + 1;
+    if (n.name.trim() === "") {
+      messages.push(`Cluster node ${h}: Enter a node name.`);
+    }
+    if (!n.nodeRole || n.nodeRole.trim() === "") {
+      messages.push(`Cluster node ${h}: Select a node role.`);
+    }
+    if (n.cpuCores.trim() === "") {
+      messages.push(`Cluster node ${h}: Enter CPU cores.`);
+    }
+    if (n.memoryGb.trim() === "") {
+      messages.push(`Cluster node ${h}: Enter memory (GB).`);
+    }
+    if (n.storageGb.trim() === "") {
+      messages.push(`Cluster node ${h}: Enter storage (GB).`);
+    }
+  });
+  return messages;
+}
+
 function serviceNameFieldLabelFor(flavorId: SovereignFlavorId): string {
-  if (flavorId === "vm") {
-    return "Service name";
+  if (flavorId === "models") {
+    return "Inference service name";
   }
-  if (flavorId === "baremetal") {
-    return "Deployment name";
+  if (flavorId === "vm" || flavorId === "cluster" || flavorId === "baremetal") {
+    return "Name";
   }
-  return "Cluster name";
+  const _exhaustive: never = flavorId;
+  return _exhaustive;
 }
 
 /** Collects user-facing validation messages for one flavor (required fields only). */
@@ -266,6 +418,15 @@ export function validationMessagesForForm(
   }
 
   if (layout === "full") {
+    if (form.apiVip.trim() === "") {
+      messages.push("Enter API VIP.");
+    }
+    if (form.ingressVip.trim() === "") {
+      messages.push("Enter ingress VIP.");
+    }
+    if (form.machineNetwork.trim() === "") {
+      messages.push("Enter machine network.");
+    }
     form.hosts.forEach((host, index) => {
       const h = index + 1;
       if (host.name.trim() === "") {
@@ -280,7 +441,56 @@ export function validationMessagesForForm(
       if (host.rootDisk.trim() === "") {
         messages.push(`Host ${h}: Enter a root disk path.`);
       }
+      if (host.redfish.trim() === "") {
+        messages.push(`Host ${h}: Enter Redfish BMC address.`);
+      }
+      if (host.redfishUser.trim() === "") {
+        messages.push(`Host ${h}: Enter Redfish user.`);
+      }
+      if (host.redfishPassword.trim() === "") {
+        messages.push(`Host ${h}: Enter Redfish password.`);
+      }
     });
+  }
+
+  if (flavorId === "vm") {
+    if (form.baseUrl.trim() === "") {
+      messages.push("Enter base URL.");
+    }
+    if (form.organization.trim() === "") {
+      messages.push("Enter organization.");
+    }
+    if (form.storagePolicy.trim() === "") {
+      messages.push("Enter storage policy.");
+    }
+  }
+
+  if (flavorId === "baremetal") {
+    if (form.provisioningNetwork.trim() === "") {
+      messages.push("Enter provisioning network.");
+    }
+  }
+
+  if (flavorId === "models") {
+    if (form.modelRuntime.trim() === "") {
+      messages.push("Enter model runtime.");
+    }
+    const anyModel =
+      form.modelIbmGranite ||
+      form.modelMetaLlama3 ||
+      form.modelMistralAi ||
+      form.modelMixtral8x7b;
+    if (!anyModel) {
+      messages.push("Select at least one Red Hat validated model.");
+    }
+    const anyGpu = form.gpuInstallNvidiaDrivers || form.gpuInstallCudaToolkit;
+    if (!anyGpu) {
+      messages.push("Select at least one GPU acceleration option.");
+    }
+  }
+
+  if (flavorId === "cluster") {
+    messages.push(...validationClusterWorkloadMessages(form));
   }
 
   return messages;
@@ -292,13 +502,31 @@ export function validateConfigureForms(
   forms: Partial<Record<SovereignFlavorId, FormState>>,
 ): ConfigureValidationIssue[] {
   const issues: ConfigureValidationIssue[] = [];
+  const infra = infrastructureFlavorIdForConfigure(selected);
+
   for (const id of selected) {
-    const form = forms[id] ?? initialFormState(id);
+    const form = mergeConfigureForm(id, forms);
+    const isTriad = id === "vm" || id === "cluster" || id === "baremetal";
+
+    if (isTriad && infra !== null && id !== infra) {
+      /* Triad fields are edited only on the shared infrastructure source form */
+      continue;
+    }
+
     const messages = validationMessagesForForm(id, form);
     if (messages.length > 0) {
       issues.push({ flavorId: id, messages });
     }
   }
+
+  if (selected.has("cluster") && infra !== "cluster") {
+    const clusterForm = mergeConfigureForm("cluster", forms);
+    const workloadMsgs = validationClusterWorkloadMessages(clusterForm);
+    if (workloadMsgs.length > 0) {
+      issues.push({ flavorId: "cluster", messages: workloadMsgs });
+    }
+  }
+
   return issues;
 }
 
@@ -309,6 +537,10 @@ type Props = {
   readOnly?: boolean;
   /** When true (after a failed “Next”), show inline errors for invalid fields. */
   showSubmitValidationErrors?: boolean;
+  /** Overrides the “Basic” subsection title. */
+  basicSectionTitle?: string;
+  /** Overrides the service name field label (defaults to “Name” for infrastructure flavors). */
+  serviceNameFieldLabelOverride?: string;
 };
 
 function FlavorConfigureReadOnlySummary({
@@ -316,11 +548,15 @@ function FlavorConfigureReadOnlySummary({
   layout,
   id,
   flavorId,
+  basicSectionTitle = "Basic",
+  serviceNameFieldLabelOverride,
 }: {
   form: FormState;
   layout: ConfigureLayout;
   id: (suffix: string) => string;
   flavorId: SovereignFlavorId;
+  basicSectionTitle?: string;
+  serviceNameFieldLabelOverride?: string;
 }) {
   const row = (label: string, value: string, isRequired = false) => (
     <div key={label} className="trial-review-summary__row">
@@ -337,6 +573,12 @@ function FlavorConfigureReadOnlySummary({
     </div>
   );
 
+  const titleRequiredMark = (
+    <span className="trial-review-summary__label-required" aria-hidden>
+      {" *"}
+    </span>
+  );
+
   return (
     <div
       className="trial-configure-summary__service-block trial-review-summary"
@@ -349,18 +591,23 @@ function FlavorConfigureReadOnlySummary({
         <Title
           id={id("basic-heading")}
           headingLevel="h4"
-          size="lg"
+          size="md"
           className="trial-review-summary__section-title trial-configure-summary__subsection-title"
         >
-          Basic
+          {basicSectionTitle}
+          {titleRequiredMark}
         </Title>
         <div className="trial-review-summary__rows">
           {row("Base domain", form.baseDomain || "—", true)}
-          {row(serviceNameFieldLabelFor(flavorId), form.serviceName || "—", true)}
+          {row(
+            serviceNameFieldLabelOverride ?? serviceNameFieldLabelFor(flavorId),
+            form.serviceName || "—",
+            true,
+          )}
         </div>
       </section>
 
-      {layout === "full" || layout === "basicNetwork" ? (
+      {layout === "full" ? (
         <section
           className="trial-review-summary__section"
           aria-labelledby={id("network-heading")}
@@ -368,15 +615,16 @@ function FlavorConfigureReadOnlySummary({
           <Title
             id={id("network-heading")}
             headingLevel="h4"
-            size="lg"
+            size="md"
             className="trial-review-summary__section-title trial-configure-summary__subsection-title"
           >
             Network
+            {titleRequiredMark}
           </Title>
           <div className="trial-review-summary__rows">
-            {row("API VIP", form.apiVip || "—")}
-            {row("Ingress VIP", form.ingressVip || "—")}
-            {row("Machine network", form.machineNetwork || "—")}
+            {row("API VIP", form.apiVip || "—", true)}
+            {row("Ingress VIP", form.ingressVip || "—", true)}
+            {row("Machine network", form.machineNetwork || "—", true)}
           </div>
         </section>
       ) : null}
@@ -389,10 +637,11 @@ function FlavorConfigureReadOnlySummary({
           <Title
             id={id("agent-hosts-heading")}
             headingLevel="h4"
-            size="lg"
+            size="md"
             className="trial-review-summary__section-title trial-configure-summary__subsection-title"
           >
             Agent hosts
+            {titleRequiredMark}
           </Title>
           <div className="trial-review-summary__hosts">
             {form.hosts.map((host, index) => (
@@ -411,10 +660,10 @@ function FlavorConfigureReadOnlySummary({
                   {row("Name", host.name || "—", true)}
                   {row("MAC address", host.mac || "—", true)}
                   {row("IP address", host.ip || "—", true)}
-                  {row("Redfish", host.redfish || "—")}
+                  {row("Redfish", host.redfish || "—", true)}
                   {row("Root disk", host.rootDisk || "—", true)}
-                  {row("Redfish user", host.redfishUser || "—")}
-                  {row("Redfish password", host.redfishPassword || "—")}
+                  {row("Redfish user", host.redfishUser || "—", true)}
+                  {row("Redfish password", host.redfishPassword || "—", true)}
                 </div>
               </div>
             ))}
@@ -469,6 +718,8 @@ export function FlavorConfigureFields({
   onFormChange,
   readOnly = false,
   showSubmitValidationErrors = false,
+  basicSectionTitle = "Basic",
+  serviceNameFieldLabelOverride,
 }: Props) {
   const layout = configureLayoutFor(flavorId);
   const p = flavorId;
@@ -496,9 +747,13 @@ export function FlavorConfigureFields({
       return;
     }
     const triad = p as TriadFlavorId;
+    const lanThird = thirdOctetFromMachineNetwork(form.machineNetwork);
     onFormChange({
       ...form,
-      hosts: [...form.hosts, makeRandomHost(triad, form.hosts.length + 1)],
+      hosts: [
+        ...form.hosts,
+        makeRandomHost(triad, form.hosts.length + 1, lanThird),
+      ],
     });
   }, [readOnly, layout, p, form, onFormChange]);
 
@@ -513,17 +768,29 @@ export function FlavorConfigureFields({
         layout={layout}
         id={id}
         flavorId={p}
+        basicSectionTitle={basicSectionTitle}
+        serviceNameFieldLabelOverride={serviceNameFieldLabelOverride}
       />
     );
   }
 
-  const serviceNameFieldLabel = serviceNameFieldLabelFor(p);
+  const serviceNameFieldLabel =
+    serviceNameFieldLabelOverride ?? serviceNameFieldLabelFor(p);
   const baseDomainHelperId = id("base-domain-helper");
   const serviceNameHelperId = id("service-name-helper");
+  const apiVipHelperId = id("api-vip-helper");
+  const ingressVipHelperId = id("ingress-vip-helper");
+  const machineNetworkHelperId = id("machine-network-helper");
   const baseMissing = form.baseDomain.trim() === "";
   const serviceMissing = form.serviceName.trim() === "";
+  const apiVipMissing = form.apiVip.trim() === "";
+  const ingressVipMissing = form.ingressVip.trim() === "";
+  const machineNetworkMissing = form.machineNetwork.trim() === "";
   const showBaseError = showSubmitValidationErrors && baseMissing;
   const showServiceError = showSubmitValidationErrors && serviceMissing;
+  const showApiVipError = showSubmitValidationErrors && apiVipMissing;
+  const showIngressVipError = showSubmitValidationErrors && ingressVipMissing;
+  const showMachineNetworkError = showSubmitValidationErrors && machineNetworkMissing;
 
   return (
     <div className="trial-configure-summary__service-block">
@@ -535,10 +802,10 @@ export function FlavorConfigureFields({
         <Title
           id={id("basic-heading")}
           headingLevel="h4"
-          size="lg"
+          size="md"
           className="trial-configure-summary__subsection-title"
         >
-          Basic
+          {basicSectionTitle}
         </Title>
         <div className="trial-configure-summary__vm-basic-grid">
           <FormGroup
@@ -612,7 +879,7 @@ export function FlavorConfigureFields({
         </div>
       </section>
 
-      {(layout === "full" || layout === "basicNetwork") ? (
+      {layout === "full" ? (
         <section
           className="trial-configure-summary__vm-subsection"
           role="group"
@@ -621,55 +888,93 @@ export function FlavorConfigureFields({
           <Title
             id={id("network-heading")}
             headingLevel="h4"
-            size="lg"
+            size="md"
             className="trial-configure-summary__subsection-title"
           >
             Network
           </Title>
           <div className="trial-configure-summary__vm-network-grid">
-            <FormGroup label="API VIP" fieldId={id("api-vip")}>
-              <TextInput
-                id={id("api-vip")}
-                name={`${p}ApiVip`}
-                value={form.apiVip}
-                {...readOnlyProps}
-                onChange={
-                  readOnly
-                    ? () => {}
-                    : (_e, v) => onFormChange({ ...form, apiVip: v })
-                }
-                aria-label="API VIP"
-              />
-            </FormGroup>
-            <FormGroup label="Ingress VIP" fieldId={id("ingress-vip")}>
-              <TextInput
-                id={id("ingress-vip")}
-                name={`${p}IngressVip`}
-                value={form.ingressVip}
-                {...readOnlyProps}
-                onChange={
-                  readOnly
-                    ? () => {}
-                    : (_e, v) => onFormChange({ ...form, ingressVip: v })
-                }
-                aria-label="Ingress VIP"
-              />
-            </FormGroup>
-            <div className="trial-configure-summary__vm-network-grid__full">
-              <FormGroup label="Machine network" fieldId={id("machine-network")}>
+            <FormGroup label="API VIP" fieldId={id("api-vip")} isRequired>
+              <Fragment>
                 <TextInput
-                  id={id("machine-network")}
-                  name={`${p}MachineNetwork`}
-                  value={form.machineNetwork}
+                  id={id("api-vip")}
+                  name={`${p}ApiVip`}
+                  value={form.apiVip}
+                  isRequired
+                  validated={showApiVipError ? "error" : "default"}
+                  aria-invalid={showApiVipError}
+                  aria-describedby={showApiVipError ? apiVipHelperId : undefined}
                   {...readOnlyProps}
                   onChange={
                     readOnly
                       ? () => {}
-                      : (_e, v) =>
-                          onFormChange({ ...form, machineNetwork: v })
+                      : (_e, v) => onFormChange({ ...form, apiVip: v })
                   }
-                  aria-label="Machine network"
+                  aria-label="API VIP"
                 />
+                {showApiVipError ? (
+                  <FormHelperText id={apiVipHelperId} className="trial-field-helper--error">
+                    Enter API VIP.
+                  </FormHelperText>
+                ) : null}
+              </Fragment>
+            </FormGroup>
+            <FormGroup label="Ingress VIP" fieldId={id("ingress-vip")} isRequired>
+              <Fragment>
+                <TextInput
+                  id={id("ingress-vip")}
+                  name={`${p}IngressVip`}
+                  value={form.ingressVip}
+                  isRequired
+                  validated={showIngressVipError ? "error" : "default"}
+                  aria-invalid={showIngressVipError}
+                  aria-describedby={showIngressVipError ? ingressVipHelperId : undefined}
+                  {...readOnlyProps}
+                  onChange={
+                    readOnly
+                      ? () => {}
+                      : (_e, v) => onFormChange({ ...form, ingressVip: v })
+                  }
+                  aria-label="Ingress VIP"
+                />
+                {showIngressVipError ? (
+                  <FormHelperText id={ingressVipHelperId} className="trial-field-helper--error">
+                    Enter ingress VIP.
+                  </FormHelperText>
+                ) : null}
+              </Fragment>
+            </FormGroup>
+            <div className="trial-configure-summary__vm-network-grid__full">
+              <FormGroup label="Machine network" fieldId={id("machine-network")} isRequired>
+                <Fragment>
+                  <TextInput
+                    id={id("machine-network")}
+                    name={`${p}MachineNetwork`}
+                    value={form.machineNetwork}
+                    isRequired
+                    validated={showMachineNetworkError ? "error" : "default"}
+                    aria-invalid={showMachineNetworkError}
+                    aria-describedby={
+                      showMachineNetworkError ? machineNetworkHelperId : undefined
+                    }
+                    {...readOnlyProps}
+                    onChange={
+                      readOnly
+                        ? () => {}
+                        : (_e, v) =>
+                            onFormChange({ ...form, machineNetwork: v })
+                    }
+                    aria-label="Machine network"
+                  />
+                  {showMachineNetworkError ? (
+                    <FormHelperText
+                      id={machineNetworkHelperId}
+                      className="trial-field-helper--error"
+                    >
+                      Enter machine network.
+                    </FormHelperText>
+                  ) : null}
+                </Fragment>
               </FormGroup>
             </div>
           </div>
@@ -686,7 +991,7 @@ export function FlavorConfigureFields({
             <Title
               id={id("agent-hosts-heading")}
               headingLevel="h4"
-              size="lg"
+              size="md"
               className="trial-configure-summary__subsection-title trial-configure-summary__subsection-title--inline"
             >
               Agent hosts
@@ -711,12 +1016,27 @@ export function FlavorConfigureFields({
               const macMissing = host.mac.trim() === "";
               const ipMissing = host.ip.trim() === "";
               const rootMissing = host.rootDisk.trim() === "";
+              const redfishFieldId = `${id("host")}-${host.id}-redfish`;
+              const redfishHelperId = `${redfishFieldId}-helper`;
+              const rfUserFieldId = `${id("host")}-${host.id}-rf-user`;
+              const rfUserHelperId = `${rfUserFieldId}-helper`;
+              const rfPassFieldId = `${id("host")}-${host.id}-rf-pass`;
+              const rfPassHelperId = `${rfPassFieldId}-helper`;
+              const redfishMissing = host.redfish.trim() === "";
+              const redfishUserMissing = host.redfishUser.trim() === "";
+              const redfishPasswordMissing = host.redfishPassword.trim() === "";
               const showNameError =
                 showSubmitValidationErrors && nameMissing;
               const showMacError = showSubmitValidationErrors && macMissing;
               const showIpError = showSubmitValidationErrors && ipMissing;
               const showRootError =
                 showSubmitValidationErrors && rootMissing;
+              const showRedfishError =
+                showSubmitValidationErrors && redfishMissing;
+              const showRedfishUserError =
+                showSubmitValidationErrors && redfishUserMissing;
+              const showRedfishPasswordError =
+                showSubmitValidationErrors && redfishPasswordMissing;
               return (
               <div key={host.id} className="trial-configure-summary__vm-host-card">
                 <Title
@@ -816,19 +1136,27 @@ export function FlavorConfigureFields({
                       ) : null}
                     </Fragment>
                   </FormGroup>
-                  <FormGroup
-                    label="Redfish"
-                    fieldId={`${id("host")}-${host.id}-redfish`}
-                  >
-                    <TextInput
-                      id={`${id("host")}-${host.id}-redfish`}
-                      value={host.redfish}
-                      {...readOnlyProps}
-                      onChange={(_e, v) =>
-                        updateHost(host.id, { redfish: v })
-                      }
-                      aria-label={`Host ${index + 1} Redfish BMC address`}
-                    />
+                  <FormGroup label="Redfish" fieldId={redfishFieldId} isRequired>
+                    <Fragment>
+                      <TextInput
+                        id={redfishFieldId}
+                        value={host.redfish}
+                        isRequired
+                        validated={showRedfishError ? "error" : "default"}
+                        aria-invalid={showRedfishError}
+                        aria-describedby={showRedfishError ? redfishHelperId : undefined}
+                        {...readOnlyProps}
+                        onChange={(_e, v) =>
+                          updateHost(host.id, { redfish: v })
+                        }
+                        aria-label={`Host ${index + 1} Redfish BMC address`}
+                      />
+                      {showRedfishError ? (
+                        <FormHelperText id={redfishHelperId} className="trial-field-helper--error">
+                          Enter Redfish BMC address.
+                        </FormHelperText>
+                      ) : null}
+                    </Fragment>
                   </FormGroup>
                   <div className="trial-configure-summary__vm-host-grid__full">
                     <FormGroup
@@ -863,65 +1191,85 @@ export function FlavorConfigureFields({
                       </Fragment>
                     </FormGroup>
                   </div>
-                  <FormGroup
-                    label="Redfish user"
-                    fieldId={`${id("host")}-${host.id}-rf-user`}
-                  >
-                    <TextInput
-                      id={`${id("host")}-${host.id}-rf-user`}
-                      value={host.redfishUser}
-                      {...readOnlyProps}
-                      onChange={(_e, v) =>
-                        updateHost(host.id, { redfishUser: v })
-                      }
-                      aria-label={`Host ${index + 1} Redfish user`}
-                    />
-                  </FormGroup>
-                  <FormGroup
-                    label="Redfish password"
-                    fieldId={`${id("host")}-${host.id}-rf-pass`}
-                  >
-                    <div className="trial-password-input-group">
+                  <FormGroup label="Redfish user" fieldId={rfUserFieldId} isRequired>
+                    <Fragment>
                       <TextInput
-                        id={`${id("host")}-${host.id}-rf-pass`}
-                        className="trial-password-input-group__input"
-                        type={
-                          redfishPasswordVisible[host.id]
-                            ? "text"
-                            : "password"
+                        id={rfUserFieldId}
+                        value={host.redfishUser}
+                        isRequired
+                        validated={showRedfishUserError ? "error" : "default"}
+                        aria-invalid={showRedfishUserError}
+                        aria-describedby={
+                          showRedfishUserError ? rfUserHelperId : undefined
                         }
-                        value={host.redfishPassword}
                         {...readOnlyProps}
                         onChange={(_e, v) =>
-                          updateHost(host.id, { redfishPassword: v })
+                          updateHost(host.id, { redfishUser: v })
                         }
-                        aria-label={`Host ${index + 1} Redfish password`}
+                        aria-label={`Host ${index + 1} Redfish user`}
                       />
-                      <Button
-                        type="button"
-                        variant="plain"
-                        className="trial-password-input-group__toggle"
-                        aria-label={
-                          redfishPasswordVisible[host.id]
-                            ? `Hide host ${index + 1} Redfish password`
-                            : `Show host ${index + 1} Redfish password`
-                        }
-                        aria-pressed={Boolean(redfishPasswordVisible[host.id])}
-                        aria-controls={`${id("host")}-${host.id}-rf-pass`}
-                        onClick={() =>
-                          setRedfishPasswordVisible((prev) => ({
-                            ...prev,
-                            [host.id]: !prev[host.id],
-                          }))
-                        }
-                      >
-                        {redfishPasswordVisible[host.id] ? (
-                          <EyeHideIcon />
-                        ) : (
-                          <EyeShowIcon />
-                        )}
-                      </Button>
-                    </div>
+                      {showRedfishUserError ? (
+                        <FormHelperText id={rfUserHelperId} className="trial-field-helper--error">
+                          Enter Redfish user.
+                        </FormHelperText>
+                      ) : null}
+                    </Fragment>
+                  </FormGroup>
+                  <FormGroup label="Redfish password" fieldId={rfPassFieldId} isRequired>
+                    <Fragment>
+                      <div className="trial-password-input-group">
+                        <TextInput
+                          id={rfPassFieldId}
+                          className="trial-password-input-group__input"
+                          type={
+                            redfishPasswordVisible[host.id]
+                              ? "text"
+                              : "password"
+                          }
+                          value={host.redfishPassword}
+                          isRequired
+                          validated={showRedfishPasswordError ? "error" : "default"}
+                          aria-invalid={showRedfishPasswordError}
+                          aria-describedby={
+                            showRedfishPasswordError ? rfPassHelperId : undefined
+                          }
+                          {...readOnlyProps}
+                          onChange={(_e, v) =>
+                            updateHost(host.id, { redfishPassword: v })
+                          }
+                          aria-label={`Host ${index + 1} Redfish password`}
+                        />
+                        <Button
+                          type="button"
+                          variant="plain"
+                          className="trial-password-input-group__toggle"
+                          aria-label={
+                            redfishPasswordVisible[host.id]
+                              ? `Hide host ${index + 1} Redfish password`
+                              : `Show host ${index + 1} Redfish password`
+                          }
+                          aria-pressed={Boolean(redfishPasswordVisible[host.id])}
+                          aria-controls={rfPassFieldId}
+                          onClick={() =>
+                            setRedfishPasswordVisible((prev) => ({
+                              ...prev,
+                              [host.id]: !prev[host.id],
+                            }))
+                          }
+                        >
+                          {redfishPasswordVisible[host.id] ? (
+                            <EyeHideIcon />
+                          ) : (
+                            <EyeShowIcon />
+                          )}
+                        </Button>
+                      </div>
+                      {showRedfishPasswordError ? (
+                        <FormHelperText id={rfPassHelperId} className="trial-field-helper--error">
+                          Enter Redfish password.
+                        </FormHelperText>
+                      ) : null}
+                    </Fragment>
                   </FormGroup>
                 </div>
               </div>

@@ -5,13 +5,12 @@ import {
   ClipboardCopyVariant,
   Content,
   Divider,
-  Flex,
   Progress,
   Stack,
   StackItem,
   Title,
 } from "@patternfly/react-core";
-import { CheckCircleIcon } from "@patternfly/react-icons";
+import { ClipboardCheckIcon, CubeIcon } from "@patternfly/react-icons";
 
 export const ARTIFACT_SUCCESS_TITLE = "Artifact generated successfully";
 export const ARTIFACT_SUCCESS_SUBTITLE =
@@ -19,7 +18,33 @@ export const ARTIFACT_SUCCESS_SUBTITLE =
 
 export const ISO_ARTIFACT_NAME = "Enclave-Platform.iso";
 
+export const CONFIG_ARTIFACT_NAME = "enclave-deployment-config.yaml";
+
 const DURATION_MS = 5000;
+
+function triggerDownload(filename: string, content: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Demo placeholder for the wizard (replace with real ISO in production). */
+export function downloadInstallerIso(): void {
+  const body = `Enclave installer ISO — demo placeholder\n\nFilename: ${ISO_ARTIFACT_NAME}\nThis file stands in for the full bootable image in this UI prototype.\n`;
+  triggerDownload(ISO_ARTIFACT_NAME, body, "application/octet-stream");
+}
+
+/** Demo deployment config download for the wizard. */
+export function downloadDeploymentConfig(): void {
+  const generatedAt = new Date().toISOString();
+  const yaml = `# Enclave deployment configuration (demo)\n# Generated: ${generatedAt}\n\napiVersion: enclave.demo/v1\nkind: DeploymentConfig\nmetadata:\n  name: enclave-trial\nspec:\n  profile: disconnected-bastion\n`;
+  triggerDownload(CONFIG_ARTIFACT_NAME, yaml, "text/yaml;charset=utf-8");
+}
 
 const STATUS_MESSAGES = [
   "Initializing build environment...",
@@ -48,20 +73,28 @@ type Props = {
 
 const INSTALL_STEPS = [
   {
-    title: "Transfer the ISO",
-    body: `Copy ${ISO_ARTIFACT_NAME} to your disconnected RHEL 9.x bastion host`,
+    title: "Download required files",
+    body: "Download both the installation ISO and the configuration file.",
+  },
+  {
+    title: "Transfer files",
+    body: "Copy the ISO and config file to your disconnected RHEL 9.x bastion host.",
   },
   {
     title: "Mount the ISO",
-    body: `Mount ${ISO_ARTIFACT_NAME} to access the installation scripts and artifacts`,
+    body: "Mount the ISO to access installation scripts and artifacts.",
+  },
+  {
+    title: "Provide the configuration",
+    body: "Place the config file in the expected location or pass it to the installer (as required).",
   },
   {
     title: "Run the installer",
-    body: "Execute the installation script as shown below",
+    body: "Execute the installation script using the provided configuration.",
   },
   {
     title: "Wait for completion",
-    body: "The automated process will take 45–90 minutes depending on hardware",
+    body: "The process takes ~45–90 minutes depending on hardware.",
   },
 ] as const;
 
@@ -103,35 +136,59 @@ function ArtifactSuccessView() {
     <Stack hasGutter className="trial-artifact-success">
       <StackItem className="trial-artifact-success__hero-item">
         <div className="trial-artifact-success__hero">
-          <Flex
-            justifyContent={{ default: "justifyContentCenter" }}
-            className="trial-artifact-success__success-icon"
+          <section
+            className="trial-artifact-success__provenance"
+            aria-label="Software bill of materials and signature"
           >
-            <CheckCircleIcon
-              style={{
-                width: "2rem",
-                height: "2rem",
-                color:
-                  "var(--pf-t--global--icon--color--status--success--default)",
-              }}
-              aria-hidden
-            />
-          </Flex>
-          <p className="trial-artifact-success__iso-name">{ISO_ARTIFACT_NAME}</p>
-          <Flex
-            className="trial-artifact-success__pills"
-            gap={{ default: "gapSm" }}
-            justifyContent={{ default: "justifyContentCenter" }}
-            flexWrap={{ default: "wrap" }}
-            role="group"
-            aria-label="Artifact type and size"
-          >
-            <span className="trial-artifact-success__pill">ISO Image</span>
-            <span className="trial-artifact-success__pill">~18.4 GB</span>
-          </Flex>
+            <ul className="trial-artifact-success__provenance-list">
+              <li className="trial-artifact-success__provenance-item trial-artifact-success__provenance-item--sbom">
+                <CubeIcon
+                  className="trial-artifact-success__provenance-icon"
+                  aria-hidden
+                />
+                <div className="trial-artifact-success__provenance-item-title">
+                  SBOM available
+                </div>
+                <Content
+                  component="p"
+                  className="trial-artifact-success__provenance-item-desc"
+                >
+                  Software Bill of Materials included for transparency
+                </Content>
+              </li>
+              <li className="trial-artifact-success__provenance-item">
+                <ClipboardCheckIcon
+                  className="trial-artifact-success__provenance-icon"
+                  aria-hidden
+                />
+                <div className="trial-artifact-success__provenance-item-title">
+                  Signature verified
+                </div>
+                <Content
+                  component="p"
+                  className="trial-artifact-success__provenance-item-desc"
+                >
+                  Cryptographically signed and verified
+                </Content>
+              </li>
+            </ul>
+          </section>
           <div className="trial-artifact-success__cta">
-            <Button variant="primary" size="lg" aria-label="Download ISO">
-              Download ISO
+            <Button
+              variant="primary"
+              size="lg"
+              aria-label="Download installer ISO"
+              onClick={downloadInstallerIso}
+            >
+              Download installer ISO
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
+              aria-label="Download config"
+              onClick={downloadDeploymentConfig}
+            >
+              Download config
             </Button>
           </div>
         </div>

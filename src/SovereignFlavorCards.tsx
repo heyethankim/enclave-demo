@@ -8,24 +8,14 @@ import {
   Title,
 } from "@patternfly/react-core";
 import type { ReactNode } from "react";
-import {
-  BundleIcon,
-  EnterpriseIcon,
-  NetworkWiredIcon,
-} from "@patternfly/react-icons";
+import { EnterpriseIcon } from "@patternfly/react-icons";
 import {
   AiFlavorIcon,
   ClusterFlavorIcon,
   CubesFlavorIcon,
 } from "./FlavorCardIcons";
 
-export type SovereignFlavorId =
-  | "vm"
-  | "cluster"
-  | "models"
-  | "container"
-  | "baremetal"
-  | "network";
+export type SovereignFlavorId = "vm" | "cluster" | "models" | "baremetal";
 
 type FlavorOption = {
   id: SovereignFlavorId;
@@ -40,9 +30,7 @@ const FLAVOR_CHIP_LABEL: Record<SovereignFlavorId, string> = {
   vm: "VM",
   cluster: "Cluster",
   models: "Models",
-  container: "Containers",
   baremetal: "Bare metal",
-  network: "Network",
 };
 
 const FLAVOR_OPTIONS: FlavorOption[] = [
@@ -88,34 +76,6 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
     ],
     icon: <AiFlavorIcon />,
     listLabel: "Model as a Service includes",
-  },
-  {
-    id: "container",
-    title: "Container as a Service",
-    lead: "On-demand container clusters for running and scaling applications with built-in automation, resilience, and security.",
-    includes: [
-      "Cluster provisioning and lifecycle management",
-      "Automated scaling and self-healing workloads",
-      "Container registry integration and image management",
-      "Service discovery and internal networking",
-      "Persistent storage for stateful applications",
-    ],
-    icon: <BundleIcon />,
-    listLabel: "Container as a Service includes",
-  },
-  {
-    id: "network",
-    title: "Network as a Service",
-    lead: "On-demand software-defined networking for connecting, isolating, and securing workloads across environments.",
-    includes: [
-      "Virtual private cloud (VPC) provisioning",
-      "Subnets, routing tables, and IP management",
-      "Network segmentation and isolation policies",
-      "Load balancing (layer 4 and layer 7)",
-      "Firewall and security group management",
-    ],
-    icon: <NetworkWiredIcon />,
-    listLabel: "Network as a Service includes",
   },
   {
     id: "baremetal",
@@ -189,7 +149,10 @@ export function SovereignFlavorCards({ selected, onToggle }: Props) {
               {isSelected ? (
                 <span className="trial-flavor-option-card__badge">Selected</span>
               ) : null}
-              <div className="trial-flavor-option-card__icon" aria-hidden>
+              <div
+                className={`trial-flavor-option-card__icon trial-flavor-option-card__icon--${opt.id}`}
+                aria-hidden
+              >
                 {opt.icon}
               </div>
               <Title
@@ -227,4 +190,4 @@ export function SovereignFlavorCards({ selected, onToggle }: Props) {
 }
 
 export const DEFAULT_SOVEREIGN_FLAVOR_SELECTION: ReadonlySet<SovereignFlavorId> =
-  new Set(["vm", "cluster", "baremetal"]);
+  new Set(["vm", "cluster"]);
