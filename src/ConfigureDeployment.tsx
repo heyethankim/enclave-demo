@@ -18,20 +18,25 @@ import {
 import { getSelectedSovereignFlavorsForSummary } from "./SovereignFlavorCards";
 import type { SovereignFlavorId } from "./SovereignFlavorCards";
 import type {
+  AgentHost,
   ClusterWorkloadNode,
   ConfigureValidationIssue,
   FormState,
 } from "./TriadFlavorConfigureFields";
 import {
+  appendRandomAgentHostToForm,
   createClusterWorkloadNode,
   FlavorConfigureFields,
   infrastructureFlavorIdForConfigure,
   mergeConfigureForm,
+  VM_DISK_PROVISIONING_OPTIONS,
+  VM_NETWORK_MODE_OPTIONS,
 } from "./TriadFlavorConfigureFields";
 import { CheckIcon, EnterpriseIcon } from "@patternfly/react-icons";
 import { AiFlavorIcon, ClusterFlavorIcon, CubesFlavorIcon } from "./FlavorCardIcons";
 import type { SecureComplyState } from "./SecureComplyStep";
 import { SecureComplyReadOnlySummary } from "./SecureComplyReadOnlySummary";
+import { AgentHostWorkloadCard } from "./AgentHostWorkloadCard";
 
 type Props = {
   selected: ReadonlySet<SovereignFlavorId>;
@@ -43,6 +48,8 @@ type Props = {
   configureValidationIssues?: ConfigureValidationIssue[];
   configureValidationFocusNonce?: number;
   showSubmitValidationErrors?: boolean;
+  /** Edit mode only: `true` after the user finishes the last configure sub-step (Completed). */
+  onConfigureSubstepsCompletionChange?: (complete: boolean) => void;
 };
 
 function sectionHintForFlavor(
@@ -121,7 +128,9 @@ function firstEditorStepIndexWithValidationIssue(
     if (infraId != null && flavorId === infraId) {
       if (flavorId === "cluster") {
         const hasInfraMessage = messages.some((m) => !m.includes("Cluster node"));
-        const hasWorkloadMessage = messages.some((m) => m.includes("Cluster node"));
+        const hasWorkloadMessage = messages.some(
+          (m) => m.includes("Cluster node") || m.includes("Node 1:"),
+        );
         if (hasInfraMessage && infraStepIdx >= 0) {
           return infraStepIdx;
         }
@@ -155,6 +164,118 @@ const CLUSTER_NODE_ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: "control-plane", label: "Control plane" },
   { value: "worker", label: "Worker" },
   { value: "infra", label: "Infra" },
+];
+
+type VmOsImageOptionKey =
+  | "vmOsRhel9"
+  | "vmOsRhel8"
+  | "vmOsFedoraCoreos"
+  | "vmOsUbuntu2204"
+  | "vmOsWindows2022"
+  | "vmOsCentosStream9";
+
+const VM_OS_IMAGE_OPTIONS: {
+  id: string;
+  key: VmOsImageOptionKey;
+  label: string;
+  logoSrc: string;
+}[] = [
+  {
+    id: "trial-vm-os-rhel9",
+    key: "vmOsRhel9",
+    label: "Red Hat Enterprise Linux 9",
+    logoSrc: "/os-logos/redhat-hat.svg",
+  },
+  {
+    id: "trial-vm-os-rhel8",
+    key: "vmOsRhel8",
+    label: "Red Hat Enterprise Linux 8",
+    logoSrc: "/os-logos/redhat-hat.svg",
+  },
+  {
+    id: "trial-vm-os-fcos",
+    key: "vmOsFedoraCoreos",
+    label: "Fedora CoreOS",
+    logoSrc: "/os-logos/fedora.png",
+  },
+  {
+    id: "trial-vm-os-ubuntu2204",
+    key: "vmOsUbuntu2204",
+    label: "Ubuntu 22.04 LTS",
+    logoSrc: "/os-logos/ubuntu.png",
+  },
+  {
+    id: "trial-vm-os-win2022",
+    key: "vmOsWindows2022",
+    label: "Windows Server 2022",
+    logoSrc: "/os-logos/windows.png",
+  },
+  {
+    id: "trial-vm-os-centos9",
+    key: "vmOsCentosStream9",
+    label: "CentOS Stream 9",
+    logoSrc: "/os-logos/centos-stream.png",
+  },
+];
+
+type ModelsValidatedCheckboxKey =
+  | "modelIbmGranite"
+  | "modelMetaLlama3"
+  | "modelMistralAi"
+  | "modelMixtral8x7b";
+
+const MODELS_VALIDATED_CHECKBOX_OPTIONS: {
+  id: string;
+  key: ModelsValidatedCheckboxKey;
+  label: string;
+  logoSrc: string;
+}[] = [
+  {
+    id: "trial-model-granite",
+    key: "modelIbmGranite",
+    label: "IBM Granite",
+    logoSrc: "/model-logos/ibm-granite.png",
+  },
+  {
+    id: "trial-model-llama",
+    key: "modelMetaLlama3",
+    label: "Meta Llama 3",
+    logoSrc: "/model-logos/meta-llama.png",
+  },
+  {
+    id: "trial-model-mistral",
+    key: "modelMistralAi",
+    label: "Mistral AI",
+    logoSrc: "/model-logos/mistral.png",
+  },
+  {
+    id: "trial-model-mixtral",
+    key: "modelMixtral8x7b",
+    label: "Mixtral 8x7B",
+    logoSrc: "/model-logos/mixtral.png",
+  },
+];
+
+type ModelsGpuCheckboxKey = "gpuInstallNvidiaDrivers" | "gpuInstallCudaToolkit";
+
+const MODELS_GPU_CHECKBOX_OPTIONS: {
+  id: string;
+  key: ModelsGpuCheckboxKey;
+  label: string;
+  logoSrc: string;
+}[] = [
+  {
+    id: "trial-model-gpu-nvidia",
+    key: "gpuInstallNvidiaDrivers",
+    label: "Install NVIDIA GPU Drivers",
+    logoSrc: "/model-logos/nvidia.png",
+  },
+  {
+    id: "trial-model-gpu-cuda",
+    key: "gpuInstallCudaToolkit",
+    label: "Install CUDA Toolkit",
+    logoSrc: "/model-logos/cuda.png",
+  },
 ];
 
 function clusterNodeRoleLabel(value: string): string {
@@ -197,6 +318,16 @@ function ClusterWorkloadBlock({
   const ro = readOnly ? ({ readOnlyVariant: "default" as const } satisfies {
     readOnlyVariant: "default";
   }) : {};
+  const [redfishPasswordVisible, setRedfishPasswordVisible] = useState<
+    Record<string, boolean>
+  >({});
+
+  const updateHost = (hostId: string, patch: Partial<AgentHost>) => {
+    onChange({
+      ...form,
+      hosts: form.hosts.map((h) => (h.id === hostId ? { ...h, ...patch } : h)),
+    });
+  };
 
   const updateNode = (nodeId: string, patch: Partial<ClusterWorkloadNode>) => {
     onChange({
@@ -279,6 +410,36 @@ function ClusterWorkloadBlock({
         </Alert>
       <div className="trial-configure-summary__vm-agent-hosts">
         {form.clusterWorkloadNodes.map((node, index) => {
+          const host0 = form.hosts[0];
+          if (index === 0 && host0) {
+            return (
+              <div key={node.id} className="trial-configure-summary__vm-host-card">
+                <Title
+                  headingLevel="h5"
+                  size="md"
+                  className="trial-configure-summary__vm-host-heading"
+                >
+                  Node 1
+                </Title>
+                <AgentHostWorkloadCard
+                  host={host0}
+                  idPrefix="trial-cluster-wl-host"
+                  hostLabelForAria="Node 1"
+                  readOnly={readOnly}
+                  showSubmitValidationErrors={showSubmitValidationErrors}
+                  onUpdateHost={(patch) => updateHost(host0.id, patch)}
+                  passwordVisible={Boolean(redfishPasswordVisible[host0.id])}
+                  onTogglePassword={() =>
+                    setRedfishPasswordVisible((prev) => ({
+                      ...prev,
+                      [host0.id]: !prev[host0.id],
+                    }))
+                  }
+                />
+              </div>
+            );
+          }
+
           const nameFieldId = `trial-cluster-node-${node.id}-name`;
           const nameHelperId = `${nameFieldId}-helper`;
           const roleFieldId = `trial-cluster-node-${node.id}-role`;
@@ -477,15 +638,48 @@ function VmWorkloadBlock({
   const ro = readOnly ? ({ readOnlyVariant: "default" as const } satisfies {
     readOnlyVariant: "default";
   }) : {};
-  const baseUrlMissing = form.baseUrl.trim() === "";
-  const orgMissing = form.organization.trim() === "";
-  const storageMissing = form.storagePolicy.trim() === "";
-  const showBaseUrlErr = showSubmitValidationErrors && baseUrlMissing;
-  const showOrgErr = showSubmitValidationErrors && orgMissing;
-  const showStorageErr = showSubmitValidationErrors && storageMissing;
-  const baseUrlHelperId = "trial-workload-vm-baseurl-helper";
-  const orgHelperId = "trial-workload-vm-org-helper";
-  const storageHelperId = "trial-workload-vm-storage-helper";
+  const anyInstance =
+    form.vmInstanceSmall ||
+    form.vmInstanceMedium ||
+    form.vmInstanceLarge ||
+    form.vmInstanceXLarge ||
+    form.vmInstanceGpu;
+  const anyOs =
+    form.vmOsRhel9 ||
+    form.vmOsRhel8 ||
+    form.vmOsFedoraCoreos ||
+    form.vmOsUbuntu2204 ||
+    form.vmOsWindows2022 ||
+    form.vmOsCentosStream9;
+  const diskTypeMissing = form.vmDiskProvisioningType.trim() === "";
+  const diskSizeMissing = form.vmDefaultDiskSize.trim() === "";
+  const netModeMissing = form.vmNetworkMode.trim() === "";
+  const showInstanceErr = showSubmitValidationErrors && !anyInstance;
+  const showOsErr = showSubmitValidationErrors && !anyOs;
+  const showDiskTypeErr = showSubmitValidationErrors && diskTypeMissing;
+  const showDiskSizeErr = showSubmitValidationErrors && diskSizeMissing;
+  const showNetModeErr = showSubmitValidationErrors && netModeMissing;
+  const instanceHelperId = "trial-workload-vm-instance-types-helper";
+  const osHelperId = "trial-workload-vm-os-images-helper";
+  const diskTypeHelperId = "trial-workload-vm-disk-type-helper";
+  const diskSizeHelperId = "trial-workload-vm-disk-size-helper";
+  const netModeHelperId = "trial-workload-vm-net-mode-helper";
+  const toggle = (key: keyof FormState, checked: boolean) => {
+    onChange({ ...form, [key]: checked } as FormState);
+  };
+  const checkboxRow = (id: string, label: string, key: keyof FormState, checked: boolean) => (
+    <label key={id} className="trial-workload-checkbox-row" htmlFor={id}>
+      <input
+        id={id}
+        type="checkbox"
+        className="trial-workload-checkbox-row__input"
+        checked={checked}
+        disabled={readOnly}
+        onChange={(e) => toggle(key, e.target.checked)}
+      />
+      <span className="trial-workload-checkbox-row__label">{label}</span>
+    </label>
+  );
   return (
     <section
       className="trial-configure-foundation__subsection"
@@ -507,92 +701,221 @@ function VmWorkloadBlock({
       <div
         className="trial-configure-service-rail-body"
         role="group"
-        aria-labelledby="trial-workload-vm-platform-heading"
+        aria-label="VM as a Service workload settings"
       >
+        <p
+          className="trial-configure-foundation__muted-label"
+          id="trial-workload-vm-instance-types-label"
+        >
+          Default instance types
+          <TrialConfigureRequiredMark />
+        </p>
+        <div
+          className="trial-workload-model-checkboxes"
+          role="group"
+          aria-labelledby="trial-workload-vm-instance-types-label"
+          aria-invalid={showInstanceErr}
+          aria-describedby={showInstanceErr ? instanceHelperId : undefined}
+        >
+          {checkboxRow(
+            "trial-vm-inst-small",
+            "Small (2 vCPU, 4 GB RAM)",
+            "vmInstanceSmall",
+            form.vmInstanceSmall,
+          )}
+          {checkboxRow(
+            "trial-vm-inst-medium",
+            "Medium (4 vCPU, 8 GB RAM)",
+            "vmInstanceMedium",
+            form.vmInstanceMedium,
+          )}
+          {checkboxRow(
+            "trial-vm-inst-large",
+            "Large (8 vCPU, 16 GB RAM)",
+            "vmInstanceLarge",
+            form.vmInstanceLarge,
+          )}
+          {checkboxRow(
+            "trial-vm-inst-xlarge",
+            "X-Large (16 vCPU, 32 GB RAM)",
+            "vmInstanceXLarge",
+            form.vmInstanceXLarge,
+          )}
+          {checkboxRow(
+            "trial-vm-inst-gpu",
+            "GPU (4 vCPU, 16 GB RAM, GPU)",
+            "vmInstanceGpu",
+            form.vmInstanceGpu,
+          )}
+        </div>
+        {showInstanceErr ? (
+          <FormHelperText id={instanceHelperId} className="trial-field-helper--error">
+            Select at least one default instance type.
+          </FormHelperText>
+        ) : null}
+
+        <p
+          className="trial-configure-foundation__muted-label"
+          id="trial-workload-vm-os-images-label"
+        >
+          Operating system images
+          <TrialConfigureRequiredMark />
+        </p>
+        <div
+          className="trial-vm-os-images-grid"
+          role="group"
+          aria-labelledby="trial-workload-vm-os-images-label"
+          aria-invalid={showOsErr}
+          aria-describedby={showOsErr ? osHelperId : undefined}
+        >
+          {VM_OS_IMAGE_OPTIONS.map((opt) => {
+            const checked = form[opt.key];
+            return (
+              <label key={opt.id} className="trial-vm-os-image-card" htmlFor={opt.id}>
+                <input
+                  id={opt.id}
+                  type="checkbox"
+                  className="trial-workload-checkbox-row__input trial-vm-os-image-card__input"
+                  checked={checked}
+                  disabled={readOnly}
+                  onChange={(e) => toggle(opt.key, e.target.checked)}
+                />
+                <span className="trial-vm-os-image-card__logo-wrap" aria-hidden>
+                  <img src={opt.logoSrc} alt="" className="trial-vm-os-image-card__logo" />
+                </span>
+                <span className="trial-vm-os-image-card__label">{opt.label}</span>
+              </label>
+            );
+          })}
+        </div>
+        {showOsErr ? (
+          <FormHelperText id={osHelperId} className="trial-field-helper--error">
+            Select at least one operating system image.
+          </FormHelperText>
+        ) : null}
+
         <Title
-          id="trial-workload-vm-platform-heading"
+          id="trial-workload-vm-storage-heading"
           headingLevel="h4"
           size="md"
           className="trial-configure-summary__subsection-title"
         >
-          Platform settings
+          Storage provisioning
         </Title>
-        <div className="trial-configure-foundation__field-grid trial-configure-foundation__field-grid--vm-workload">
-        <FormGroup
-          label="Base URL"
-          fieldId="trial-workload-vm-baseurl"
-          className="trial-workload-vm-base-url"
-          isRequired
+        <div
+          className="trial-configure-foundation__field-grid"
+          role="group"
+          aria-labelledby="trial-workload-vm-storage-heading"
         >
-          <Fragment>
-            <TextInput
-              id="trial-workload-vm-baseurl"
-              value={form.baseUrl}
-              isRequired
-              validated={showBaseUrlErr ? "error" : "default"}
-              aria-invalid={showBaseUrlErr}
-              aria-describedby={showBaseUrlErr ? baseUrlHelperId : undefined}
-              {...ro}
-              onChange={
-                readOnly ? () => {} : (_e, v) => onChange({ ...form, baseUrl: v })
-              }
-              aria-label="Base URL"
+          <FormGroup label="Disk provisioning type" fieldId="trial-vm-disk-type" isRequired>
+            <Fragment>
+              <select
+                id="trial-vm-disk-type"
+                className="trial-configure-foundation__select pf-v6-c-form-control"
+                value={form.vmDiskProvisioningType}
+                disabled={readOnly}
+                aria-invalid={showDiskTypeErr}
+                aria-describedby={showDiskTypeErr ? diskTypeHelperId : undefined}
+                aria-label="Disk provisioning type"
+                onChange={
+                  readOnly
+                    ? undefined
+                    : (e) => onChange({ ...form, vmDiskProvisioningType: e.target.value })
+                }
+              >
+                <option value="">Select disk provisioning type</option>
+                {VM_DISK_PROVISIONING_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+              {showDiskTypeErr ? (
+                <FormHelperText id={diskTypeHelperId} className="trial-field-helper--error">
+                  Select disk provisioning type.
+                </FormHelperText>
+              ) : null}
+            </Fragment>
+          </FormGroup>
+          <FormGroup label="Default disk size" fieldId="trial-vm-disk-size" isRequired>
+            <Fragment>
+              <TextInput
+                id="trial-vm-disk-size"
+                value={form.vmDefaultDiskSize}
+                isRequired
+                validated={showDiskSizeErr ? "error" : "default"}
+                aria-invalid={showDiskSizeErr}
+                aria-describedby={showDiskSizeErr ? diskSizeHelperId : undefined}
+                {...ro}
+                onChange={
+                  readOnly ? () => {} : (_e, v) => onChange({ ...form, vmDefaultDiskSize: v })
+                }
+                aria-label="Default disk size"
+                placeholder="e.g. 80Gi"
+              />
+              {showDiskSizeErr ? (
+                <FormHelperText id={diskSizeHelperId} className="trial-field-helper--error">
+                  Enter default disk size.
+                </FormHelperText>
+              ) : null}
+            </Fragment>
+          </FormGroup>
+        </div>
+
+        <Title
+          id="trial-workload-vm-network-heading"
+          headingLevel="h4"
+          size="md"
+          className="trial-configure-summary__subsection-title trial-vm-network-heading"
+        >
+          Network configuration
+        </Title>
+        <div
+          className="trial-configure-foundation__field-grid trial-configure-foundation__field-grid--vm-network"
+          role="group"
+          aria-labelledby="trial-workload-vm-network-heading"
+        >
+          <FormGroup label="Network mode" fieldId="trial-vm-net-mode" isRequired>
+            <Fragment>
+              <select
+                id="trial-vm-net-mode"
+                className="trial-configure-foundation__select pf-v6-c-form-control"
+                value={form.vmNetworkMode}
+                disabled={readOnly}
+                aria-invalid={showNetModeErr}
+                aria-describedby={showNetModeErr ? netModeHelperId : undefined}
+                aria-label="Network mode"
+                onChange={
+                  readOnly
+                    ? undefined
+                    : (e) => onChange({ ...form, vmNetworkMode: e.target.value })
+                }
+              >
+                <option value="">Select network mode</option>
+                {VM_NETWORK_MODE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+              {showNetModeErr ? (
+                <FormHelperText id={netModeHelperId} className="trial-field-helper--error">
+                  Select network mode.
+                </FormHelperText>
+              ) : null}
+            </Fragment>
+          </FormGroup>
+          <label className="trial-workload-checkbox-row" htmlFor="trial-vm-vlan">
+            <input
+              id="trial-vm-vlan"
+              type="checkbox"
+              className="trial-workload-checkbox-row__input"
+              checked={form.vmVlanEnabled}
+              disabled={readOnly}
+              onChange={(e) => onChange({ ...form, vmVlanEnabled: e.target.checked })}
             />
-            {showBaseUrlErr ? (
-              <FormHelperText id={baseUrlHelperId} className="trial-field-helper--error">
-                Enter base URL.
-              </FormHelperText>
-            ) : null}
-          </Fragment>
-        </FormGroup>
-        <FormGroup label="Organization" fieldId="trial-workload-vm-org" isRequired>
-          <Fragment>
-            <TextInput
-              id="trial-workload-vm-org"
-              value={form.organization}
-              isRequired
-              validated={showOrgErr ? "error" : "default"}
-              aria-invalid={showOrgErr}
-              aria-describedby={showOrgErr ? orgHelperId : undefined}
-              {...ro}
-              onChange={
-                readOnly
-                  ? () => {}
-                  : (_e, v) => onChange({ ...form, organization: v })
-              }
-              aria-label="Organization"
-            />
-            {showOrgErr ? (
-              <FormHelperText id={orgHelperId} className="trial-field-helper--error">
-                Enter organization.
-              </FormHelperText>
-            ) : null}
-          </Fragment>
-        </FormGroup>
-        <FormGroup label="Storage policy" fieldId="trial-workload-vm-storage" isRequired>
-          <Fragment>
-            <TextInput
-              id="trial-workload-vm-storage"
-              value={form.storagePolicy}
-              isRequired
-              validated={showStorageErr ? "error" : "default"}
-              aria-invalid={showStorageErr}
-              aria-describedby={showStorageErr ? storageHelperId : undefined}
-              {...ro}
-              onChange={
-                readOnly
-                  ? () => {}
-                  : (_e, v) => onChange({ ...form, storagePolicy: v })
-              }
-              aria-label="Storage policy"
-            />
-            {showStorageErr ? (
-              <FormHelperText id={storageHelperId} className="trial-field-helper--error">
-                Enter storage policy.
-              </FormHelperText>
-            ) : null}
-          </Fragment>
-        </FormGroup>
+            <span className="trial-workload-checkbox-row__label">Enable VLAN support</span>
+          </label>
         </div>
       </div>
     </section>
@@ -608,9 +931,18 @@ function BareMetalWorkloadBlock({
   const ro = readOnly ? ({ readOnlyVariant: "default" as const } satisfies {
     readOnlyVariant: "default";
   }) : {};
+  const [redfishPasswordVisible, setRedfishPasswordVisible] = useState<
+    Record<string, boolean>
+  >({});
   const provMissing = form.provisioningNetwork.trim() === "";
   const showProvErr = showSubmitValidationErrors && provMissing;
   const provHelperId = "trial-workload-bm-provnet-helper";
+  const updateHost = (hostId: string, patch: Partial<AgentHost>) => {
+    onChange({
+      ...form,
+      hosts: form.hosts.map((h) => (h.id === hostId ? { ...h, ...patch } : h)),
+    });
+  };
   return (
     <section
       className="trial-configure-foundation__subsection"
@@ -688,6 +1020,61 @@ function BareMetalWorkloadBlock({
           </select>
         </FormGroup>
         </div>
+
+        <div className="trial-baremetal-workload-hosts-block">
+          <div className="trial-configure-summary__vm-agent-hosts-title-row">
+            <Title
+              id="trial-workload-bm-hosts-heading"
+              headingLevel="h4"
+              size="md"
+              className="trial-configure-summary__subsection-title trial-configure-summary__subsection-title--inline"
+            >
+              Agent host
+              <TrialConfigureRequiredMark />
+            </Title>
+            {!readOnly ? (
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => onChange(appendRandomAgentHostToForm(form, "baremetal"))}
+              >
+                Add host
+              </Button>
+            ) : null}
+          </div>
+          <div
+            className="trial-configure-summary__vm-agent-hosts"
+            role="group"
+            aria-labelledby="trial-workload-bm-hosts-heading"
+          >
+            {form.hosts.map((host, index) => (
+              <div key={host.id} className="trial-configure-summary__vm-host-card">
+                <Title
+                  headingLevel="h5"
+                  size="md"
+                  className="trial-configure-summary__vm-host-heading"
+                >
+                  Host {index + 1}
+                </Title>
+                <AgentHostWorkloadCard
+                  host={host}
+                  idPrefix={`trial-bm-wl-host-${host.id}`}
+                  hostLabelForAria={`Host ${index + 1}`}
+                  readOnly={readOnly}
+                  showSubmitValidationErrors={showSubmitValidationErrors}
+                  onUpdateHost={(patch) => updateHost(host.id, patch)}
+                  passwordVisible={Boolean(redfishPasswordVisible[host.id])}
+                  onTogglePassword={() =>
+                    setRedfishPasswordVisible((prev) => ({
+                      ...prev,
+                      [host.id]: !prev[host.id],
+                    }))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -708,19 +1095,6 @@ function ModelsWorkloadBlock({
   const toggle = (key: keyof FormState, checked: boolean) => {
     onChange({ ...form, [key]: checked } as FormState);
   };
-  const row = (id: string, label: string, key: keyof FormState, checked: boolean) => (
-    <label key={id} className="trial-workload-checkbox-row" htmlFor={id}>
-      <input
-        id={id}
-        type="checkbox"
-        className="trial-workload-checkbox-row__input"
-        checked={checked}
-        disabled={readOnly}
-        onChange={(e) => toggle(key, e.target.checked)}
-      />
-      <span className="trial-workload-checkbox-row__label">{label}</span>
-    </label>
-  );
   return (
     <section
       className="trial-configure-foundation__subsection"
@@ -760,39 +1134,34 @@ function ModelsWorkloadBlock({
           role="group"
           aria-label="Red Hat validated models"
         >
-        <p className="trial-configure-foundation__muted-label">
+        <p
+          className="trial-configure-foundation__muted-label"
+          id="trial-workload-models-validated-label"
+        >
           Red Hat validated models
           <TrialConfigureRequiredMark />
         </p>
         <div
-          className="trial-workload-model-checkboxes"
+          className="trial-vm-os-images-grid"
           role="group"
-          aria-label="Red Hat validated models"
+          aria-labelledby="trial-workload-models-validated-label"
         >
-          {row(
-            "trial-model-granite",
-            "IBM Granite",
-            "modelIbmGranite",
-            form.modelIbmGranite,
-          )}
-          {row(
-            "trial-model-llama",
-            "Meta Llama 3",
-            "modelMetaLlama3",
-            form.modelMetaLlama3,
-          )}
-          {row(
-            "trial-model-mistral",
-            "Mistral AI",
-            "modelMistralAi",
-            form.modelMistralAi,
-          )}
-          {row(
-            "trial-model-mixtral",
-            "Mixtral 8x7B",
-            "modelMixtral8x7b",
-            form.modelMixtral8x7b,
-          )}
+          {MODELS_VALIDATED_CHECKBOX_OPTIONS.map((opt) => (
+            <label key={opt.id} className="trial-vm-os-image-card" htmlFor={opt.id}>
+              <input
+                id={opt.id}
+                type="checkbox"
+                className="trial-workload-checkbox-row__input trial-vm-os-image-card__input"
+                checked={form[opt.key]}
+                disabled={readOnly}
+                onChange={(e) => toggle(opt.key, e.target.checked)}
+              />
+              <span className="trial-vm-os-image-card__logo-wrap" aria-hidden>
+                <img src={opt.logoSrc} alt="" className="trial-vm-os-image-card__logo" />
+              </span>
+              <span className="trial-vm-os-image-card__label">{opt.label}</span>
+            </label>
+          ))}
         </div>
         </div>
         <div
@@ -800,27 +1169,34 @@ function ModelsWorkloadBlock({
           role="group"
           aria-label="GPU acceleration"
         >
-        <p className="trial-configure-foundation__muted-label">
+        <p
+          className="trial-configure-foundation__muted-label"
+          id="trial-workload-models-gpu-accel-label"
+        >
           GPU acceleration
           <TrialConfigureRequiredMark />
         </p>
         <div
-          className="trial-workload-model-checkboxes"
+          className="trial-vm-os-images-grid"
           role="group"
-          aria-label="GPU acceleration options"
+          aria-labelledby="trial-workload-models-gpu-accel-label"
         >
-          {row(
-            "trial-model-gpu-nvidia",
-            "Install NVIDIA GPU Drivers",
-            "gpuInstallNvidiaDrivers",
-            form.gpuInstallNvidiaDrivers,
-          )}
-          {row(
-            "trial-model-gpu-cuda",
-            "Install CUDA Toolkit",
-            "gpuInstallCudaToolkit",
-            form.gpuInstallCudaToolkit,
-          )}
+          {MODELS_GPU_CHECKBOX_OPTIONS.map((opt) => (
+            <label key={opt.id} className="trial-vm-os-image-card" htmlFor={opt.id}>
+              <input
+                id={opt.id}
+                type="checkbox"
+                className="trial-workload-checkbox-row__input trial-vm-os-image-card__input"
+                checked={form[opt.key]}
+                disabled={readOnly}
+                onChange={(e) => toggle(opt.key, e.target.checked)}
+              />
+              <span className="trial-vm-os-image-card__logo-wrap" aria-hidden>
+                <img src={opt.logoSrc} alt="" className="trial-vm-os-image-card__logo" />
+              </span>
+              <span className="trial-vm-os-image-card__label">{opt.label}</span>
+            </label>
+          ))}
         </div>
         </div>
         <div className="trial-workload-models-runtime">
@@ -875,6 +1251,33 @@ function WorkloadReadOnlySummary({
   );
   const yn = (b: boolean) => (b ? "Yes" : "No");
   const clusterRo = mergeConfigureForm("cluster", forms);
+  const bmRo = mergeConfigureForm("baremetal", forms);
+  const vmRo = mergeConfigureForm("vm", forms);
+  const modelsRo = mergeConfigureForm("models", forms);
+  const vmInstanceLines = (() => {
+    const lines: string[] = [];
+    if (vmRo.vmInstanceSmall) {
+      lines.push("Small (2 vCPU, 4 GB RAM)");
+    }
+    if (vmRo.vmInstanceMedium) {
+      lines.push("Medium (4 vCPU, 8 GB RAM)");
+    }
+    if (vmRo.vmInstanceLarge) {
+      lines.push("Large (8 vCPU, 16 GB RAM)");
+    }
+    if (vmRo.vmInstanceXLarge) {
+      lines.push("X-Large (16 vCPU, 32 GB RAM)");
+    }
+    if (vmRo.vmInstanceGpu) {
+      lines.push("GPU (4 vCPU, 16 GB RAM, GPU)");
+    }
+    return lines;
+  })();
+  const vmOsSelectedOptions = VM_OS_IMAGE_OPTIONS.filter((opt) => vmRo[opt.key]);
+  const modelsValidatedSelectedOptions = MODELS_VALIDATED_CHECKBOX_OPTIONS.filter(
+    (opt) => modelsRo[opt.key],
+  );
+  const modelsGpuSelectedOptions = MODELS_GPU_CHECKBOX_OPTIONS.filter((opt) => modelsRo[opt.key]);
   return (
     <div className="trial-configure-foundation__workload-readonly">
       {selected.has("vm") ? (
@@ -889,22 +1292,118 @@ function WorkloadReadOnlySummary({
           </div>
           <div className="trial-configure-service-rail-body">
           <Title
-            id="trial-workload-vm-platform-review-heading"
+            id="trial-workload-vm-instance-review-heading"
             headingLevel="h4"
             size="md"
             className="trial-configure-summary__subsection-title"
           >
-            Platform settings
+            Default instance types
             <TrialReviewRequiredMark />
           </Title>
           <div
             className="trial-review-summary__rows"
             role="group"
-            aria-labelledby="trial-workload-vm-platform-review-heading"
+            aria-labelledby="trial-workload-vm-instance-review-heading"
           >
-            {row("Base URL", mergeConfigureForm("vm", forms).baseUrl || "—", true)}
-            {row("Organization", mergeConfigureForm("vm", forms).organization || "—", true)}
-            {row("Storage policy", mergeConfigureForm("vm", forms).storagePolicy || "—", true)}
+            <Fragment>
+              <span className="trial-review-summary__label">
+                Enabled types
+                <span className="trial-review-summary__label-required" aria-hidden>
+                  {" "}
+                  *
+                </span>
+              </span>
+              <span className="trial-review-summary__value trial-review-summary__value--vm-review-stack">
+                {vmInstanceLines.length ? (
+                  <span className="trial-review-summary__vm-review-stack-inner">
+                    {vmInstanceLines.map((line) => (
+                      <span key={line} className="trial-review-summary__vm-review-type-line">
+                        {line}
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  "—"
+                )}
+              </span>
+            </Fragment>
+          </div>
+          <Title
+            id="trial-workload-vm-os-review-heading"
+            headingLevel="h4"
+            size="md"
+            className="trial-configure-summary__subsection-title"
+          >
+            Operating system images
+            <TrialReviewRequiredMark />
+          </Title>
+          <div
+            className="trial-review-summary__rows"
+            role="group"
+            aria-labelledby="trial-workload-vm-os-review-heading"
+          >
+            <Fragment>
+              <span className="trial-review-summary__label">
+                Enabled images
+                <span className="trial-review-summary__label-required" aria-hidden>
+                  {" "}
+                  *
+                </span>
+              </span>
+              <span className="trial-review-summary__value trial-review-summary__value--vm-review-stack">
+                {vmOsSelectedOptions.length ? (
+                  <span className="trial-review-summary__vm-review-stack-inner">
+                    {vmOsSelectedOptions.map((opt) => (
+                      <span key={opt.id} className="trial-review-summary__vm-review-os-line">
+                        <img
+                          src={opt.logoSrc}
+                          alt=""
+                          className="trial-review-summary__vm-review-os-logo"
+                          width={24}
+                          height={24}
+                        />
+                        <span>{opt.label}</span>
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  "—"
+                )}
+              </span>
+            </Fragment>
+          </div>
+          <Title
+            id="trial-workload-vm-storage-review-heading"
+            headingLevel="h4"
+            size="md"
+            className="trial-configure-summary__subsection-title trial-vm-review-storage-heading"
+          >
+            Storage provisioning
+            <TrialReviewRequiredMark />
+          </Title>
+          <div
+            className="trial-review-summary__rows"
+            role="group"
+            aria-labelledby="trial-workload-vm-storage-review-heading"
+          >
+            {row("Disk provisioning type", vmRo.vmDiskProvisioningType || "—", true)}
+            {row("Default disk size", vmRo.vmDefaultDiskSize || "—", true)}
+          </div>
+          <Title
+            id="trial-workload-vm-network-review-heading"
+            headingLevel="h4"
+            size="md"
+            className="trial-configure-summary__subsection-title trial-vm-review-network-heading"
+          >
+            Network configuration
+          </Title>
+          <div
+            className="trial-review-summary__rows"
+            role="group"
+            aria-labelledby="trial-workload-vm-network-review-heading"
+          >
+            {row("Network mode", vmRo.vmNetworkMode || "—", true)}
+            {row("VLAN support", yn(vmRo.vmVlanEnabled))}
           </div>
           </div>
         </section>
@@ -928,24 +1427,49 @@ function WorkloadReadOnlySummary({
             Cluster nodes
             <TrialReviewRequiredMark />
           </Title>
-          {clusterRo.clusterWorkloadNodes.map((node, index) => (
-            <div key={node.id} className="trial-review-summary__host-block">
-              <Title
-                headingLevel="h5"
-                size="md"
-                className="trial-review-summary__host-title trial-configure-summary__vm-host-heading"
-              >
-                Node {index + 1}
-              </Title>
-              <div className="trial-review-summary__rows">
-                {row("Node name", node.name || "—", true)}
-                {row("Node role", clusterNodeRoleLabel(node.nodeRole), true)}
-                {row("CPU cores", node.cpuCores || "—", true)}
-                {row("Memory (GB)", node.memoryGb || "—", true)}
-                {row("Storage (GB)", node.storageGb || "—", true)}
+          {clusterRo.clusterWorkloadNodes.map((node, index) => {
+            const host0 = clusterRo.hosts[0];
+            if (index === 0 && host0) {
+              return (
+                <div key={node.id} className="trial-review-summary__host-block">
+                  <Title
+                    headingLevel="h5"
+                    size="md"
+                    className="trial-review-summary__host-title trial-configure-summary__vm-host-heading"
+                  >
+                    Node 1
+                  </Title>
+                  <div className="trial-review-summary__rows">
+                    {row("Name", host0.name || "—", true)}
+                    {row("MAC address", host0.mac || "—", true)}
+                    {row("IP address", host0.ip || "—", true)}
+                    {row("Redfish", host0.redfish || "—", true)}
+                    {row("Root disk", host0.rootDisk || "—", true)}
+                    {row("Redfish user", host0.redfishUser || "—", true)}
+                    {row("Redfish password", host0.redfishPassword || "—", true)}
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div key={node.id} className="trial-review-summary__host-block">
+                <Title
+                  headingLevel="h5"
+                  size="md"
+                  className="trial-review-summary__host-title trial-configure-summary__vm-host-heading"
+                >
+                  Node {index + 1}
+                </Title>
+                <div className="trial-review-summary__rows">
+                  {row("Node name", node.name || "—", true)}
+                  {row("Node role", clusterNodeRoleLabel(node.nodeRole), true)}
+                  {row("CPU cores", node.cpuCores || "—", true)}
+                  {row("Memory (GB)", node.memoryGb || "—", true)}
+                  {row("Storage (GB)", node.storageGb || "—", true)}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <p className="trial-configure-foundation__muted-label">
             High availability
             <TrialReviewRequiredMark />
@@ -993,38 +1517,100 @@ function WorkloadReadOnlySummary({
             <TrialReviewRequiredMark />
           </Title>
           <div className="trial-workload-models-group">
-            <p className="trial-configure-foundation__muted-label">
+            <Title
+              id="trial-workload-models-validated-review-heading"
+              headingLevel="h4"
+              size="md"
+              className="trial-configure-summary__subsection-title"
+            >
               Red Hat validated models
               <TrialReviewRequiredMark />
-            </p>
-            <div className="trial-review-summary__rows">
-              {row("IBM Granite", yn(mergeConfigureForm("models", forms).modelIbmGranite), true)}
-              {row("Meta Llama 3", yn(mergeConfigureForm("models", forms).modelMetaLlama3), true)}
-              {row("Mistral AI", yn(mergeConfigureForm("models", forms).modelMistralAi), true)}
-              {row("Mixtral 8x7B", yn(mergeConfigureForm("models", forms).modelMixtral8x7b), true)}
+            </Title>
+            <div
+              className="trial-review-summary__rows"
+              role="group"
+              aria-labelledby="trial-workload-models-validated-review-heading"
+            >
+              <Fragment>
+                <span className="trial-review-summary__label">
+                  Enabled models
+                  <span className="trial-review-summary__label-required" aria-hidden>
+                    {" "}
+                    *
+                  </span>
+                </span>
+                <span className="trial-review-summary__value trial-review-summary__value--vm-review-stack">
+                  {modelsValidatedSelectedOptions.length ? (
+                    <span className="trial-review-summary__vm-review-stack-inner">
+                      {modelsValidatedSelectedOptions.map((opt) => (
+                        <span key={opt.id} className="trial-review-summary__vm-review-os-line">
+                          <img
+                            src={opt.logoSrc}
+                            alt=""
+                            className="trial-review-summary__vm-review-os-logo"
+                            width={24}
+                            height={24}
+                          />
+                          <span>{opt.label}</span>
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </span>
+              </Fragment>
             </div>
           </div>
           <div className="trial-workload-models-group">
-            <p className="trial-configure-foundation__muted-label">
+            <Title
+              id="trial-workload-models-gpu-accel-review-heading"
+              headingLevel="h4"
+              size="md"
+              className="trial-configure-summary__subsection-title"
+            >
               GPU acceleration
               <TrialReviewRequiredMark />
-            </p>
-            <div className="trial-review-summary__rows">
-              {row(
-                "Install NVIDIA GPU Drivers",
-                yn(mergeConfigureForm("models", forms).gpuInstallNvidiaDrivers),
-                true,
-              )}
-              {row(
-                "Install CUDA Toolkit",
-                yn(mergeConfigureForm("models", forms).gpuInstallCudaToolkit),
-                true,
-              )}
+            </Title>
+            <div
+              className="trial-review-summary__rows"
+              role="group"
+              aria-labelledby="trial-workload-models-gpu-accel-review-heading"
+            >
+              <Fragment>
+                <span className="trial-review-summary__label">
+                  Enabled GPU options
+                  <span className="trial-review-summary__label-required" aria-hidden>
+                    {" "}
+                    *
+                  </span>
+                </span>
+                <span className="trial-review-summary__value trial-review-summary__value--vm-review-stack">
+                  {modelsGpuSelectedOptions.length ? (
+                    <span className="trial-review-summary__vm-review-stack-inner">
+                      {modelsGpuSelectedOptions.map((opt) => (
+                        <span key={opt.id} className="trial-review-summary__vm-review-os-line">
+                          <img
+                            src={opt.logoSrc}
+                            alt=""
+                            className="trial-review-summary__vm-review-os-logo"
+                            width={24}
+                            height={24}
+                          />
+                          <span>{opt.label}</span>
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </span>
+              </Fragment>
             </div>
           </div>
           <div className="trial-workload-models-runtime">
             <div className="trial-review-summary__rows">
-              {row("Model runtime", mergeConfigureForm("models", forms).modelRuntime || "—", true)}
+              {row("Model runtime", modelsRo.modelRuntime || "—", true)}
             </div>
           </div>
           </div>
@@ -1058,12 +1644,43 @@ function WorkloadReadOnlySummary({
             role="group"
             aria-labelledby="trial-workload-bm-network-boot-review-heading"
           >
-            {row(
-              "Provisioning network",
-              mergeConfigureForm("baremetal", forms).provisioningNetwork || "—",
-              true,
-            )}
-            {row("Boot mode", mergeConfigureForm("baremetal", forms).bootMode || "—", true)}
+            {row("Provisioning network", bmRo.provisioningNetwork || "—", true)}
+            {row("Boot mode", bmRo.bootMode || "—", true)}
+          </div>
+          <Title
+            id="trial-workload-bm-hosts-review-heading"
+            headingLevel="h4"
+            size="md"
+            className="trial-configure-summary__subsection-title trial-bm-review-agent-host-heading"
+          >
+            Agent host
+            <TrialReviewRequiredMark />
+          </Title>
+          <div
+            className="trial-review-summary__hosts"
+            role="group"
+            aria-labelledby="trial-workload-bm-hosts-review-heading"
+          >
+            {bmRo.hosts.map((host, index) => (
+              <div key={host.id} className="trial-review-summary__host-block">
+                <Title
+                  headingLevel="h5"
+                  size="md"
+                  className="trial-review-summary__host-title trial-configure-summary__vm-host-heading"
+                >
+                  Host {index + 1}
+                </Title>
+                <div className="trial-review-summary__rows">
+                  {row("Name", host.name || "—", true)}
+                  {row("MAC address", host.mac || "—", true)}
+                  {row("IP address", host.ip || "—", true)}
+                  {row("Redfish", host.redfish || "—", true)}
+                  {row("Root disk", host.rootDisk || "—", true)}
+                  {row("Redfish user", host.redfishUser || "—", true)}
+                  {row("Redfish password", host.redfishPassword || "—", true)}
+                </div>
+              </div>
+            ))}
           </div>
           </div>
         </section>
@@ -1081,6 +1698,7 @@ export function ConfigureDeployment({
   configureValidationIssues = [],
   configureValidationFocusNonce = 0,
   showSubmitValidationErrors = false,
+  onConfigureSubstepsCompletionChange,
 }: Props) {
   const rows = useMemo(
     () => getSelectedSovereignFlavorsForSummary(selected),
@@ -1114,7 +1732,10 @@ export function ConfigureDeployment({
   useEffect(() => {
     setConfigureEditorStepIndex(0);
     setConfigureFinalContinueDone(false);
-  }, [configureFlowKey]);
+    if (!readOnly) {
+      onConfigureSubstepsCompletionChange?.(false);
+    }
+  }, [configureFlowKey, readOnly, onConfigureSubstepsCompletionChange]);
 
   useEffect(() => {
     const last = configureEditorSteps.length - 1;
@@ -1128,6 +1749,25 @@ export function ConfigureDeployment({
       Math.min(i, Math.max(0, configureEditorSteps.length - 1)),
     );
   }, [configureEditorSteps.length]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    const n = configureEditorSteps.length;
+    if (n === 0) {
+      onConfigureSubstepsCompletionChange?.(true);
+      return;
+    }
+    const lastIdx = n - 1;
+    const complete =
+      configureFinalContinueDone && configureEditorStepIndex === lastIdx;
+    onConfigureSubstepsCompletionChange?.(complete);
+  }, [
+    readOnly,
+    configureEditorSteps.length,
+    configureEditorStepIndex,
+    configureFinalContinueDone,
+    onConfigureSubstepsCompletionChange,
+  ]);
 
   useEffect(() => {
     if (readOnly || configureValidationFocusNonce === 0) return;
@@ -1486,7 +2126,7 @@ export function ConfigureDeployment({
               )}
             </div>
 
-            {configureEditorSteps.length > 1 ? (
+            {configureEditorSteps.length > 0 ? (
               <div className="trial-configure-substep-footer">
                 <Button
                   variant="secondary"

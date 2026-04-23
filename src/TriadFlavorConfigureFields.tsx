@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useState } from "react";
 import {
+  Alert,
   Button,
   FormGroup,
   FormHelperText,
@@ -41,9 +42,21 @@ export type FormState = {
   machineNetwork: string;
   hosts: AgentHost[];
   /** VM as a Service — workload */
-  baseUrl: string;
-  organization: string;
-  storagePolicy: string;
+  vmInstanceSmall: boolean;
+  vmInstanceMedium: boolean;
+  vmInstanceLarge: boolean;
+  vmInstanceXLarge: boolean;
+  vmInstanceGpu: boolean;
+  vmOsRhel9: boolean;
+  vmOsRhel8: boolean;
+  vmOsFedoraCoreos: boolean;
+  vmOsUbuntu2204: boolean;
+  vmOsWindows2022: boolean;
+  vmOsCentosStream9: boolean;
+  vmDiskProvisioningType: string;
+  vmDefaultDiskSize: string;
+  vmNetworkMode: string;
+  vmVlanEnabled: boolean;
   /** Bare Metal as a Service — workload */
   provisioningNetwork: string;
   bootMode: string;
@@ -61,13 +74,216 @@ export type FormState = {
   clusterWorkloadNodes: ClusterWorkloadNode[];
   clusterHaEnabled: boolean;
   clusterAutoscaleEnabled: boolean;
+  /** Triad infrastructure — storage (full layout only) */
+  storageBackend: string;
+  storageDefaultClass: string;
+  storageDefaultVolumeSize: string;
+  storageReplicationFactor: string;
+  storageVolumeBindingMode: string;
+  storageFeatPvPvc: boolean;
+  storageFeatEncryptionAtRest: boolean;
+  storageFeatVolumeCloning: boolean;
+  storageFeatVolumeSnapshots: boolean;
+  storageFeatVolumeExpansion: boolean;
+  storageFeatCsiDrivers: boolean;
+  storagePerfIopsLimit: string;
+  storagePerfThroughputLimit: string;
 };
+
+function infraStorageEmpty(): Pick<
+  FormState,
+  | "storageBackend"
+  | "storageDefaultClass"
+  | "storageDefaultVolumeSize"
+  | "storageReplicationFactor"
+  | "storageVolumeBindingMode"
+  | "storageFeatPvPvc"
+  | "storageFeatEncryptionAtRest"
+  | "storageFeatVolumeCloning"
+  | "storageFeatVolumeSnapshots"
+  | "storageFeatVolumeExpansion"
+  | "storageFeatCsiDrivers"
+  | "storagePerfIopsLimit"
+  | "storagePerfThroughputLimit"
+> {
+  return {
+    storageBackend: "",
+    storageDefaultClass: "",
+    storageDefaultVolumeSize: "",
+    storageReplicationFactor: "",
+    storageVolumeBindingMode: "",
+    storageFeatPvPvc: false,
+    storageFeatEncryptionAtRest: false,
+    storageFeatVolumeCloning: false,
+    storageFeatVolumeSnapshots: false,
+    storageFeatVolumeExpansion: false,
+    storageFeatCsiDrivers: false,
+    storagePerfIopsLimit: "",
+    storagePerfThroughputLimit: "",
+  };
+}
+
+function pickRandom<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)] as T;
+}
+
+export const VM_DISK_PROVISIONING_OPTIONS = [
+  "Thin provisioning",
+  "Thick eager zeroed",
+  "Thick lazy zeroed",
+  "Dynamic expansion",
+] as const;
+
+export const VM_NETWORK_MODE_OPTIONS = [
+  "Isolated VPC",
+  "Bridged",
+  "NAT",
+  "Routed overlay",
+  "Transparent mode",
+] as const;
+
+const INFRA_STORAGE_BACKEND_OPTIONS = [
+  "OpenShift Data Foundation",
+  "Ceph RBD",
+  "Portworx PX-Store",
+  "NFS v4.2",
+  "OpenEBS Mayastor",
+  "NetApp Astra Trident",
+] as const;
+
+const INFRA_STORAGE_REPLICATION_OPTIONS = ["2", "3", "5"] as const;
+
+const INFRA_STORAGE_BINDING_MODE_OPTIONS = [
+  "Immediate",
+  "WaitForFirstConsumer",
+] as const;
+
+function randomInfraStorageFields(): Pick<
+  FormState,
+  | "storageBackend"
+  | "storageDefaultClass"
+  | "storageDefaultVolumeSize"
+  | "storageReplicationFactor"
+  | "storageVolumeBindingMode"
+  | "storageFeatPvPvc"
+  | "storageFeatEncryptionAtRest"
+  | "storageFeatVolumeCloning"
+  | "storageFeatVolumeSnapshots"
+  | "storageFeatVolumeExpansion"
+  | "storageFeatCsiDrivers"
+  | "storagePerfIopsLimit"
+  | "storagePerfThroughputLimit"
+> {
+  const sizeGi = 50 + Math.floor(Math.random() * 5) * 50;
+  const randBool = () => Math.random() > 0.35;
+  return {
+    storageBackend: pickRandom(INFRA_STORAGE_BACKEND_OPTIONS),
+    storageDefaultClass: `ceph-block-${Math.floor(Math.random() * 90 + 10)}`,
+    storageDefaultVolumeSize: `${sizeGi}Gi`,
+    storageReplicationFactor: pickRandom(INFRA_STORAGE_REPLICATION_OPTIONS),
+    storageVolumeBindingMode: pickRandom(INFRA_STORAGE_BINDING_MODE_OPTIONS),
+    storageFeatPvPvc: randBool(),
+    storageFeatEncryptionAtRest: randBool(),
+    storageFeatVolumeCloning: randBool(),
+    storageFeatVolumeSnapshots: randBool(),
+    storageFeatVolumeExpansion: randBool(),
+    storageFeatCsiDrivers: randBool(),
+    storagePerfIopsLimit: String(4000 + Math.floor(Math.random() * 16000)),
+    storagePerfThroughputLimit: `${200 + Math.floor(Math.random() * 800)} MiB/s`,
+  };
+}
+
+type VmWorkloadRandomFields = Pick<
+  FormState,
+  | "vmInstanceSmall"
+  | "vmInstanceMedium"
+  | "vmInstanceLarge"
+  | "vmInstanceXLarge"
+  | "vmInstanceGpu"
+  | "vmOsRhel9"
+  | "vmOsRhel8"
+  | "vmOsFedoraCoreos"
+  | "vmOsUbuntu2204"
+  | "vmOsWindows2022"
+  | "vmOsCentosStream9"
+  | "vmDiskProvisioningType"
+  | "vmDefaultDiskSize"
+  | "vmNetworkMode"
+  | "vmVlanEnabled"
+>;
+
+function shuffleInPlace<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function randomIntInclusive(min: number, max: number): number {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+/** Picks how many checkboxes to turn on, then chooses that many at random (always 1..max). */
+function randomVmWorkloadFields(): VmWorkloadRandomFields {
+  const instanceKeys = [
+    "vmInstanceSmall",
+    "vmInstanceMedium",
+    "vmInstanceLarge",
+    "vmInstanceXLarge",
+    "vmInstanceGpu",
+  ] as const satisfies readonly (keyof VmWorkloadRandomFields)[];
+  const osKeys = [
+    "vmOsRhel9",
+    "vmOsRhel8",
+    "vmOsFedoraCoreos",
+    "vmOsUbuntu2204",
+    "vmOsWindows2022",
+    "vmOsCentosStream9",
+  ] as const satisfies readonly (keyof VmWorkloadRandomFields)[];
+
+  const pickSubset = <K extends keyof VmWorkloadRandomFields>(
+    keys: readonly K[],
+  ): Record<K, boolean> => {
+    const picked = new Set(
+      shuffleInPlace([...keys]).slice(0, randomIntInclusive(1, keys.length)),
+    );
+    return Object.fromEntries(keys.map((k) => [k, picked.has(k)])) as Record<
+      K,
+      boolean
+    >;
+  };
+
+  const inst = pickSubset(instanceKeys);
+  const os = pickSubset(osKeys);
+
+  return {
+    ...inst,
+    ...os,
+    vmDiskProvisioningType: pickRandom(VM_DISK_PROVISIONING_OPTIONS),
+    vmDefaultDiskSize: `${40 + Math.floor(Math.random() * 6) * 20}Gi`,
+    vmNetworkMode: pickRandom(VM_NETWORK_MODE_OPTIONS),
+    vmVlanEnabled: Math.random() > 0.5,
+  };
+}
 
 function workloadDefaults(): Pick<
   FormState,
-  | "baseUrl"
-  | "organization"
-  | "storagePolicy"
+  | "vmInstanceSmall"
+  | "vmInstanceMedium"
+  | "vmInstanceLarge"
+  | "vmInstanceXLarge"
+  | "vmInstanceGpu"
+  | "vmOsRhel9"
+  | "vmOsRhel8"
+  | "vmOsFedoraCoreos"
+  | "vmOsUbuntu2204"
+  | "vmOsWindows2022"
+  | "vmOsCentosStream9"
+  | "vmDiskProvisioningType"
+  | "vmDefaultDiskSize"
+  | "vmNetworkMode"
+  | "vmVlanEnabled"
   | "provisioningNetwork"
   | "bootMode"
   | "modelIbmGranite"
@@ -80,11 +296,36 @@ function workloadDefaults(): Pick<
   | "clusterWorkloadNodes"
   | "clusterHaEnabled"
   | "clusterAutoscaleEnabled"
+  | "storageBackend"
+  | "storageDefaultClass"
+  | "storageDefaultVolumeSize"
+  | "storageReplicationFactor"
+  | "storageVolumeBindingMode"
+  | "storageFeatPvPvc"
+  | "storageFeatEncryptionAtRest"
+  | "storageFeatVolumeCloning"
+  | "storageFeatVolumeSnapshots"
+  | "storageFeatVolumeExpansion"
+  | "storageFeatCsiDrivers"
+  | "storagePerfIopsLimit"
+  | "storagePerfThroughputLimit"
 > {
   return {
-    baseUrl: "https://api.mgmt.example.com/v1",
-    organization: "",
-    storagePolicy: "",
+    vmInstanceSmall: false,
+    vmInstanceMedium: false,
+    vmInstanceLarge: false,
+    vmInstanceXLarge: false,
+    vmInstanceGpu: false,
+    vmOsRhel9: false,
+    vmOsRhel8: false,
+    vmOsFedoraCoreos: false,
+    vmOsUbuntu2204: false,
+    vmOsWindows2022: false,
+    vmOsCentosStream9: false,
+    vmDiskProvisioningType: "",
+    vmDefaultDiskSize: "",
+    vmNetworkMode: "",
+    vmVlanEnabled: false,
     provisioningNetwork: "",
     bootMode: "UEFI",
     modelIbmGranite: true,
@@ -97,6 +338,7 @@ function workloadDefaults(): Pick<
     clusterWorkloadNodes: [],
     clusterHaEnabled: true,
     clusterAutoscaleEnabled: true,
+    ...infraStorageEmpty(),
   };
 }
 
@@ -191,37 +433,6 @@ function thirdOctetFromMachineNetwork(machineNetwork: string): number {
   return randomOctet(2, 250);
 }
 
-const VM_ORG_PREFIXES = [
-  "northwind",
-  "acme",
-  "contoso",
-  "globex",
-  "initech",
-  "umbrella",
-] as const;
-
-const VM_ORG_SUFFIXES = ["-labs", "-platform", "-infra", "-cloud", ""] as const;
-
-function randomVmOrganization(): string {
-  const p = VM_ORG_PREFIXES[Math.floor(Math.random() * VM_ORG_PREFIXES.length)];
-  const s = VM_ORG_SUFFIXES[Math.floor(Math.random() * VM_ORG_SUFFIXES.length)];
-  const n = Math.floor(Math.random() * 900 + 100);
-  return `${p}${s}-${n}`;
-}
-
-const VM_STORAGE_POLICIES = [
-  "ceph-rbd-gold",
-  "ssd-premium-default",
-  "tiered-warm-archive",
-  "nfs-backup-retain-30d",
-  "local-lvm-provisioned",
-  "thin-replicated-ssd",
-] as const;
-
-function randomVmStoragePolicy(): string {
-  return VM_STORAGE_POLICIES[Math.floor(Math.random() * VM_STORAGE_POLICIES.length)];
-}
-
 function makeVmHost1(lanThirdOctet: number): AgentHost {
   const last = randomOctet(12, 90);
   return {
@@ -242,6 +453,18 @@ function hostNameFor(flavor: TriadFlavorId, hostNumber: number): string {
     return `bmc-ctl${suffix}`;
   }
   return `mgmt-ctl${suffix}`;
+}
+
+/** Append a randomized agent host (same rules as Infrastructure “Add host”). */
+export function appendRandomAgentHostToForm(
+  form: FormState,
+  flavor: TriadFlavorId,
+): FormState {
+  const lanThird = thirdOctetFromMachineNetwork(form.machineNetwork);
+  return {
+    ...form,
+    hosts: [...form.hosts, makeRandomHost(flavor, form.hosts.length + 1, lanThird)],
+  };
 }
 
 function makeRandomHost(
@@ -320,8 +543,7 @@ function initialTriadFormState(flavor: TriadFlavorId): FormState {
     workload.clusterWorkloadNodes = [createClusterWorkloadNode(0)];
   }
   if (flavor === "vm") {
-    workload.organization = randomVmOrganization();
-    workload.storagePolicy = randomVmStoragePolicy();
+    Object.assign(workload, randomVmWorkloadFields());
   }
   if (flavor === "baremetal") {
     workload.provisioningNetwork = net.machineNetwork;
@@ -334,6 +556,7 @@ function initialTriadFormState(flavor: TriadFlavorId): FormState {
     machineNetwork: net.machineNetwork,
     hosts: initialHostsTriad(flavor, net.lanThirdOctet),
     ...workload,
+    ...randomInfraStorageFields(),
   };
 }
 
@@ -363,6 +586,48 @@ export function initialFormState(flavorId: SovereignFlavorId): FormState {
   };
 }
 
+/** Required agent host fields (used for Infrastructure hosts and workload “Host 1 / Node 1” cards). */
+export function validationAgentHostFields(
+  host: AgentHost | undefined,
+  label: string,
+): string[] {
+  if (!host) {
+    return [];
+  }
+  const p = `${label}: `;
+  const messages: string[] = [];
+  if (host.name.trim() === "") {
+    messages.push(`${p}Enter a name.`);
+  }
+  if (host.mac.trim() === "") {
+    messages.push(`${p}Enter a MAC address.`);
+  }
+  if (host.ip.trim() === "") {
+    messages.push(`${p}Enter the IP address.`);
+  }
+  if (host.rootDisk.trim() === "") {
+    messages.push(`${p}Enter a root disk path.`);
+  }
+  if (host.redfish.trim() === "") {
+    messages.push(`${p}Enter Redfish BMC address.`);
+  }
+  if (host.redfishUser.trim() === "") {
+    messages.push(`${p}Enter Redfish user.`);
+  }
+  if (host.redfishPassword.trim() === "") {
+    messages.push(`${p}Enter Redfish password.`);
+  }
+  return messages;
+}
+
+/** When cluster workload is edited separately from infra, Node 1 maps to `hosts[0]`. */
+export function validationClusterWorkloadNode1HostMessages(form: FormState): string[] {
+  if (form.clusterWorkloadNodes.length === 0) {
+    return [];
+  }
+  return validationAgentHostFields(form.hosts[0], "Node 1");
+}
+
 export function validationClusterWorkloadMessages(form: FormState): string[] {
   const messages: string[] = [];
   if (form.clusterWorkloadNodes.length === 0) {
@@ -370,6 +635,9 @@ export function validationClusterWorkloadMessages(form: FormState): string[] {
     return messages;
   }
   form.clusterWorkloadNodes.forEach((n, index) => {
+    if (index === 0) {
+      return;
+    }
     const h = index + 1;
     if (n.name.trim() === "") {
       messages.push(`Cluster node ${h}: Enter a node name.`);
@@ -427,41 +695,60 @@ export function validationMessagesForForm(
     if (form.machineNetwork.trim() === "") {
       messages.push("Enter machine network.");
     }
+    if (form.storageBackend.trim() === "") {
+      messages.push("Select a storage backend.");
+    }
+    if (form.storageDefaultClass.trim() === "") {
+      messages.push("Enter default storage class.");
+    }
+    if (form.storageDefaultVolumeSize.trim() === "") {
+      messages.push("Enter default volume size.");
+    }
+    if (form.storageReplicationFactor.trim() === "") {
+      messages.push("Select replication factor.");
+    }
+    if (form.storageVolumeBindingMode.trim() === "") {
+      messages.push("Select volume binding mode.");
+    }
+    if (form.storagePerfIopsLimit.trim() === "") {
+      messages.push("Enter IOPS limit.");
+    }
+    if (form.storagePerfThroughputLimit.trim() === "") {
+      messages.push("Enter throughput limit.");
+    }
     form.hosts.forEach((host, index) => {
-      const h = index + 1;
-      if (host.name.trim() === "") {
-        messages.push(`Host ${h}: Enter a name.`);
-      }
-      if (host.mac.trim() === "") {
-        messages.push(`Host ${h}: Enter a MAC address.`);
-      }
-      if (host.ip.trim() === "") {
-        messages.push(`Host ${h}: Enter the IP address.`);
-      }
-      if (host.rootDisk.trim() === "") {
-        messages.push(`Host ${h}: Enter a root disk path.`);
-      }
-      if (host.redfish.trim() === "") {
-        messages.push(`Host ${h}: Enter Redfish BMC address.`);
-      }
-      if (host.redfishUser.trim() === "") {
-        messages.push(`Host ${h}: Enter Redfish user.`);
-      }
-      if (host.redfishPassword.trim() === "") {
-        messages.push(`Host ${h}: Enter Redfish password.`);
-      }
+      messages.push(...validationAgentHostFields(host, `Host ${index + 1}`));
     });
   }
 
   if (flavorId === "vm") {
-    if (form.baseUrl.trim() === "") {
-      messages.push("Enter base URL.");
+    const anyInstance =
+      form.vmInstanceSmall ||
+      form.vmInstanceMedium ||
+      form.vmInstanceLarge ||
+      form.vmInstanceXLarge ||
+      form.vmInstanceGpu;
+    if (!anyInstance) {
+      messages.push("Select at least one default instance type.");
     }
-    if (form.organization.trim() === "") {
-      messages.push("Enter organization.");
+    const anyOs =
+      form.vmOsRhel9 ||
+      form.vmOsRhel8 ||
+      form.vmOsFedoraCoreos ||
+      form.vmOsUbuntu2204 ||
+      form.vmOsWindows2022 ||
+      form.vmOsCentosStream9;
+    if (!anyOs) {
+      messages.push("Select at least one operating system image.");
     }
-    if (form.storagePolicy.trim() === "") {
-      messages.push("Enter storage policy.");
+    if (form.vmDiskProvisioningType.trim() === "") {
+      messages.push("Select disk provisioning type.");
+    }
+    if (form.vmDefaultDiskSize.trim() === "") {
+      messages.push("Enter default disk size.");
+    }
+    if (form.vmNetworkMode.trim() === "") {
+      messages.push("Select network mode.");
     }
   }
 
@@ -521,9 +808,26 @@ export function validateConfigureForms(
 
   if (selected.has("cluster") && infra !== "cluster") {
     const clusterForm = mergeConfigureForm("cluster", forms);
-    const workloadMsgs = validationClusterWorkloadMessages(clusterForm);
+    const workloadMsgs = [
+      ...validationClusterWorkloadNode1HostMessages(clusterForm),
+      ...validationClusterWorkloadMessages(clusterForm),
+    ];
     if (workloadMsgs.length > 0) {
       issues.push({ flavorId: "cluster", messages: workloadMsgs });
+    }
+  }
+
+  if (selected.has("baremetal") && infra !== "baremetal") {
+    const bmForm = mergeConfigureForm("baremetal", forms);
+    const bmMsgs: string[] = [];
+    if (bmForm.provisioningNetwork.trim() === "") {
+      bmMsgs.push("Enter provisioning network.");
+    }
+    bmForm.hosts.forEach((host, index) => {
+      bmMsgs.push(...validationAgentHostFields(host, `Host ${index + 1}`));
+    });
+    if (bmMsgs.length > 0) {
+      issues.push({ flavorId: "baremetal", messages: bmMsgs });
     }
   }
 
@@ -625,6 +929,66 @@ function FlavorConfigureReadOnlySummary({
             {row("API VIP", form.apiVip || "—", true)}
             {row("Ingress VIP", form.ingressVip || "—", true)}
             {row("Machine network", form.machineNetwork || "—", true)}
+          </div>
+        </section>
+      ) : null}
+
+      {layout === "full" ? (
+        <section
+          className="trial-review-summary__section"
+          aria-labelledby={id("storage-heading")}
+        >
+          <Title
+            id={id("storage-heading")}
+            headingLevel="h4"
+            size="md"
+            className="trial-review-summary__section-title trial-configure-summary__subsection-title"
+          >
+            Storage
+            {titleRequiredMark}
+          </Title>
+          <div className="trial-review-summary__rows">
+            {row("Storage backend", form.storageBackend || "—", true)}
+            {row("Default storage class", form.storageDefaultClass || "—", true)}
+            {row("Default volume size", form.storageDefaultVolumeSize || "—", true)}
+            {row("Replication factor", form.storageReplicationFactor || "—", true)}
+            {row("Volume binding mode", form.storageVolumeBindingMode || "—", true)}
+          </div>
+          <Title headingLevel="h5" size="md" className="trial-infra-storage-subheading">
+            Storage features
+          </Title>
+          <div className="trial-review-summary__rows">
+            {row(
+              "Persistent volumes (PV/PVC)",
+              form.storageFeatPvPvc ? "Enabled" : "Disabled",
+            )}
+            {row(
+              "Storage encryption at rest",
+              form.storageFeatEncryptionAtRest ? "Enabled" : "Disabled",
+            )}
+            {row(
+              "Volume cloning",
+              form.storageFeatVolumeCloning ? "Enabled" : "Disabled",
+            )}
+            {row(
+              "Volume snapshots",
+              form.storageFeatVolumeSnapshots ? "Enabled" : "Disabled",
+            )}
+            {row(
+              "Volume expansion",
+              form.storageFeatVolumeExpansion ? "Enabled" : "Disabled",
+            )}
+            {row(
+              "CSI drivers",
+              form.storageFeatCsiDrivers ? "Enabled" : "Disabled",
+            )}
+          </div>
+          <Title headingLevel="h5" size="md" className="trial-infra-storage-subheading">
+            Performance options
+          </Title>
+          <div className="trial-review-summary__rows">
+            {row("IOPS limit", form.storagePerfIopsLimit || "—", true)}
+            {row("Throughput limit", form.storagePerfThroughputLimit || "—", true)}
           </div>
         </section>
       ) : null}
@@ -746,15 +1110,7 @@ export function FlavorConfigureFields({
     if (readOnly || layout !== "full") {
       return;
     }
-    const triad = p as TriadFlavorId;
-    const lanThird = thirdOctetFromMachineNetwork(form.machineNetwork);
-    onFormChange({
-      ...form,
-      hosts: [
-        ...form.hosts,
-        makeRandomHost(triad, form.hosts.length + 1, lanThird),
-      ],
-    });
+    onFormChange(appendRandomAgentHostToForm(form, p as TriadFlavorId));
   }, [readOnly, layout, p, form, onFormChange]);
 
   const [redfishPasswordVisible, setRedfishPasswordVisible] = useState<
@@ -791,6 +1147,35 @@ export function FlavorConfigureFields({
   const showApiVipError = showSubmitValidationErrors && apiVipMissing;
   const showIngressVipError = showSubmitValidationErrors && ingressVipMissing;
   const showMachineNetworkError = showSubmitValidationErrors && machineNetworkMissing;
+
+  const storageBackendHelperId = id("storage-backend-helper");
+  const storageDefaultClassHelperId = id("storage-default-class-helper");
+  const storageDefaultVolumeSizeHelperId = id("storage-default-volume-size-helper");
+  const storageReplicationHelperId = id("storage-replication-helper");
+  const storageBindingHelperId = id("storage-binding-helper");
+  const storageIopsHelperId = id("storage-iops-helper");
+  const storageThroughputHelperId = id("storage-throughput-helper");
+  const storageBackendMissing = form.storageBackend.trim() === "";
+  const storageClassMissing = form.storageDefaultClass.trim() === "";
+  const storageVolSizeMissing = form.storageDefaultVolumeSize.trim() === "";
+  const storageReplicationMissing = form.storageReplicationFactor.trim() === "";
+  const storageBindingMissing = form.storageVolumeBindingMode.trim() === "";
+  const storageIopsMissing = form.storagePerfIopsLimit.trim() === "";
+  const storageThroughputMissing = form.storagePerfThroughputLimit.trim() === "";
+  const showStorageBackendError =
+    showSubmitValidationErrors && storageBackendMissing;
+  const showStorageClassError =
+    showSubmitValidationErrors && storageClassMissing;
+  const showStorageVolSizeError =
+    showSubmitValidationErrors && storageVolSizeMissing;
+  const showStorageReplicationError =
+    showSubmitValidationErrors && storageReplicationMissing;
+  const showStorageBindingError =
+    showSubmitValidationErrors && storageBindingMissing;
+  const showStorageIopsError =
+    showSubmitValidationErrors && storageIopsMissing;
+  const showStorageThroughputError =
+    showSubmitValidationErrors && storageThroughputMissing;
 
   return (
     <div className="trial-configure-summary__service-block">
@@ -985,6 +1370,378 @@ export function FlavorConfigureFields({
         <section
           className="trial-configure-summary__vm-subsection"
           role="group"
+          aria-labelledby={id("storage-heading")}
+        >
+          <Title
+            id={id("storage-heading")}
+            headingLevel="h4"
+            size="md"
+            className="trial-configure-summary__subsection-title"
+          >
+            Storage
+          </Title>
+          <div className="trial-configure-summary__vm-network-grid">
+            <FormGroup label="Storage backend" fieldId={id("storage-backend")} isRequired>
+              <Fragment>
+                <select
+                  id={id("storage-backend")}
+                  className="pf-v6-c-form-control trial-configure-foundation__select"
+                  aria-invalid={showStorageBackendError}
+                  aria-describedby={
+                    showStorageBackendError ? storageBackendHelperId : undefined
+                  }
+                  value={form.storageBackend}
+                  onChange={(e) =>
+                    onFormChange({ ...form, storageBackend: e.currentTarget.value })
+                  }
+                >
+                  <option value="">Select backend</option>
+                  {INFRA_STORAGE_BACKEND_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+                {showStorageBackendError ? (
+                  <FormHelperText
+                    id={storageBackendHelperId}
+                    className="trial-field-helper--error"
+                  >
+                    Select a storage backend.
+                  </FormHelperText>
+                ) : null}
+              </Fragment>
+            </FormGroup>
+            <FormGroup
+              label="Default storage class"
+              fieldId={id("storage-default-class")}
+              isRequired
+            >
+              <Fragment>
+                <TextInput
+                  id={id("storage-default-class")}
+                  name={`${p}StorageDefaultClass`}
+                  value={form.storageDefaultClass}
+                  isRequired
+                  validated={showStorageClassError ? "error" : "default"}
+                  aria-invalid={showStorageClassError}
+                  aria-describedby={
+                    showStorageClassError ? storageDefaultClassHelperId : undefined
+                  }
+                  onChange={(_e, v) =>
+                    onFormChange({ ...form, storageDefaultClass: v })
+                  }
+                  aria-label="Default storage class"
+                />
+                {showStorageClassError ? (
+                  <FormHelperText
+                    id={storageDefaultClassHelperId}
+                    className="trial-field-helper--error"
+                  >
+                    Enter default storage class.
+                  </FormHelperText>
+                ) : null}
+              </Fragment>
+            </FormGroup>
+            <FormGroup
+              label="Default volume size"
+              fieldId={id("storage-default-volume-size")}
+              isRequired
+            >
+              <Fragment>
+                <TextInput
+                  id={id("storage-default-volume-size")}
+                  name={`${p}StorageDefaultVolumeSize`}
+                  value={form.storageDefaultVolumeSize}
+                  isRequired
+                  validated={showStorageVolSizeError ? "error" : "default"}
+                  aria-invalid={showStorageVolSizeError}
+                  aria-describedby={
+                    showStorageVolSizeError
+                      ? storageDefaultVolumeSizeHelperId
+                      : undefined
+                  }
+                  onChange={(_e, v) =>
+                    onFormChange({ ...form, storageDefaultVolumeSize: v })
+                  }
+                  aria-label="Default volume size"
+                />
+                {showStorageVolSizeError ? (
+                  <FormHelperText
+                    id={storageDefaultVolumeSizeHelperId}
+                    className="trial-field-helper--error"
+                  >
+                    Enter default volume size.
+                  </FormHelperText>
+                ) : null}
+              </Fragment>
+            </FormGroup>
+            <FormGroup
+              label="Replication factor"
+              fieldId={id("storage-replication")}
+              isRequired
+            >
+              <Fragment>
+                <select
+                  id={id("storage-replication")}
+                  className="pf-v6-c-form-control trial-configure-foundation__select"
+                  aria-invalid={showStorageReplicationError}
+                  aria-describedby={
+                    showStorageReplicationError ? storageReplicationHelperId : undefined
+                  }
+                  value={form.storageReplicationFactor}
+                  onChange={(e) =>
+                    onFormChange({
+                      ...form,
+                      storageReplicationFactor: e.currentTarget.value,
+                    })
+                  }
+                >
+                  <option value="">Select replication</option>
+                  {INFRA_STORAGE_REPLICATION_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+                {showStorageReplicationError ? (
+                  <FormHelperText
+                    id={storageReplicationHelperId}
+                    className="trial-field-helper--error"
+                  >
+                    Select replication factor.
+                  </FormHelperText>
+                ) : null}
+              </Fragment>
+            </FormGroup>
+            <div className="trial-configure-summary__vm-network-grid__full">
+              <FormGroup
+                label="Volume binding mode"
+                fieldId={id("storage-binding-mode")}
+                isRequired
+              >
+                <Fragment>
+                  <select
+                    id={id("storage-binding-mode")}
+                    className="pf-v6-c-form-control trial-configure-foundation__select"
+                    aria-invalid={showStorageBindingError}
+                    aria-describedby={
+                      showStorageBindingError ? storageBindingHelperId : undefined
+                    }
+                    value={form.storageVolumeBindingMode}
+                    onChange={(e) =>
+                      onFormChange({
+                        ...form,
+                        storageVolumeBindingMode: e.currentTarget.value,
+                      })
+                    }
+                  >
+                    <option value="">Select binding mode</option>
+                    {INFRA_STORAGE_BINDING_MODE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                  {showStorageBindingError ? (
+                    <FormHelperText
+                      id={storageBindingHelperId}
+                      className="trial-field-helper--error"
+                    >
+                      Select volume binding mode.
+                    </FormHelperText>
+                  ) : null}
+                </Fragment>
+              </FormGroup>
+            </div>
+          </div>
+
+          <Title
+            headingLevel="h5"
+            size="md"
+            className="trial-infra-storage-subheading"
+          >
+            Storage features
+          </Title>
+          <div className="trial-infra-storage-features">
+            <label className="trial-workload-checkbox-row" htmlFor={id("storage-feat-pv")}>
+              <input
+                id={id("storage-feat-pv")}
+                type="checkbox"
+                className="trial-workload-checkbox-row__input"
+                checked={form.storageFeatPvPvc}
+                onChange={(e) =>
+                  onFormChange({ ...form, storageFeatPvPvc: e.target.checked })
+                }
+              />
+              <span className="trial-workload-checkbox-row__label">
+                Enable persistent volumes (PV/PVC support)
+              </span>
+            </label>
+            <label
+              className="trial-workload-checkbox-row"
+              htmlFor={id("storage-feat-encrypt")}
+            >
+              <input
+                id={id("storage-feat-encrypt")}
+                type="checkbox"
+                className="trial-workload-checkbox-row__input"
+                checked={form.storageFeatEncryptionAtRest}
+                onChange={(e) =>
+                  onFormChange({
+                    ...form,
+                    storageFeatEncryptionAtRest: e.target.checked,
+                  })
+                }
+              />
+              <span className="trial-workload-checkbox-row__label">
+                Enable storage encryption at rest
+              </span>
+            </label>
+            <label className="trial-workload-checkbox-row" htmlFor={id("storage-feat-clone")}>
+              <input
+                id={id("storage-feat-clone")}
+                type="checkbox"
+                className="trial-workload-checkbox-row__input"
+                checked={form.storageFeatVolumeCloning}
+                onChange={(e) =>
+                  onFormChange({
+                    ...form,
+                    storageFeatVolumeCloning: e.target.checked,
+                  })
+                }
+              />
+              <span className="trial-workload-checkbox-row__label">
+                Enable volume cloning (fast volume copies)
+              </span>
+            </label>
+            <label
+              className="trial-workload-checkbox-row"
+              htmlFor={id("storage-feat-snap")}
+            >
+              <input
+                id={id("storage-feat-snap")}
+                type="checkbox"
+                className="trial-workload-checkbox-row__input"
+                checked={form.storageFeatVolumeSnapshots}
+                onChange={(e) =>
+                  onFormChange({
+                    ...form,
+                    storageFeatVolumeSnapshots: e.target.checked,
+                  })
+                }
+              />
+              <span className="trial-workload-checkbox-row__label">
+                Enable volume snapshots (backup and restore)
+              </span>
+            </label>
+            <label className="trial-workload-checkbox-row" htmlFor={id("storage-feat-expand")}>
+              <input
+                id={id("storage-feat-expand")}
+                type="checkbox"
+                className="trial-workload-checkbox-row__input"
+                checked={form.storageFeatVolumeExpansion}
+                onChange={(e) =>
+                  onFormChange({
+                    ...form,
+                    storageFeatVolumeExpansion: e.target.checked,
+                  })
+                }
+              />
+              <span className="trial-workload-checkbox-row__label">
+                Allow volume expansion (resize volumes dynamically)
+              </span>
+            </label>
+            <label className="trial-workload-checkbox-row" htmlFor={id("storage-feat-csi")}>
+              <input
+                id={id("storage-feat-csi")}
+                type="checkbox"
+                className="trial-workload-checkbox-row__input"
+                checked={form.storageFeatCsiDrivers}
+                onChange={(e) =>
+                  onFormChange({ ...form, storageFeatCsiDrivers: e.target.checked })
+                }
+              />
+              <span className="trial-workload-checkbox-row__label">
+                Enable CSI (Container Storage Interface) drivers
+              </span>
+            </label>
+          </div>
+
+          <Title
+            headingLevel="h5"
+            size="md"
+            className="trial-infra-storage-subheading"
+          >
+            Performance options
+          </Title>
+          <div className="trial-infra-storage-perf-grid">
+            <FormGroup label="IOPS limit" fieldId={id("storage-iops")} isRequired>
+              <Fragment>
+                <TextInput
+                  id={id("storage-iops")}
+                  name={`${p}StorageIopsLimit`}
+                  value={form.storagePerfIopsLimit}
+                  isRequired
+                  validated={showStorageIopsError ? "error" : "default"}
+                  aria-invalid={showStorageIopsError}
+                  aria-describedby={
+                    showStorageIopsError ? storageIopsHelperId : undefined
+                  }
+                  onChange={(_e, v) =>
+                    onFormChange({ ...form, storagePerfIopsLimit: v })
+                  }
+                  aria-label="IOPS limit"
+                />
+                {showStorageIopsError ? (
+                  <FormHelperText
+                    id={storageIopsHelperId}
+                    className="trial-field-helper--error"
+                  >
+                    Enter IOPS limit.
+                  </FormHelperText>
+                ) : null}
+              </Fragment>
+            </FormGroup>
+            <FormGroup
+              label="Throughput limit"
+              fieldId={id("storage-throughput")}
+              isRequired
+            >
+              <Fragment>
+                <TextInput
+                  id={id("storage-throughput")}
+                  name={`${p}StorageThroughputLimit`}
+                  value={form.storagePerfThroughputLimit}
+                  isRequired
+                  validated={showStorageThroughputError ? "error" : "default"}
+                  aria-invalid={showStorageThroughputError}
+                  aria-describedby={
+                    showStorageThroughputError ? storageThroughputHelperId : undefined
+                  }
+                  onChange={(_e, v) =>
+                    onFormChange({ ...form, storagePerfThroughputLimit: v })
+                  }
+                  aria-label="Throughput limit"
+                />
+                {showStorageThroughputError ? (
+                  <FormHelperText
+                    id={storageThroughputHelperId}
+                    className="trial-field-helper--error"
+                  >
+                    Enter throughput limit.
+                  </FormHelperText>
+                ) : null}
+              </Fragment>
+            </FormGroup>
+          </div>
+        </section>
+      ) : null}
+
+      {layout === "full" ? (
+        <section
+          className="trial-configure-summary__vm-subsection"
+          role="group"
           aria-labelledby={id("agent-hosts-heading")}
         >
           <div className="trial-configure-summary__vm-agent-hosts-title-row">
@@ -1002,6 +1759,16 @@ export function FlavorConfigureFields({
               </Button>
             ) : null}
           </div>
+          <Alert
+            variant="info"
+            isInline
+            className="trial-triad-infra-agent-hosts-alert"
+            title="Manage your infra anytime"
+          >
+            You can add, remove, or modify nodes at any time after deployment through the
+            management interface. This allows you to scale and update your infrastructure without
+            downtime.
+          </Alert>
           <div className="trial-configure-summary__vm-agent-hosts">
             {form.hosts.map((host, index) => {
               const ipFieldId = `${id("host")}-${host.id}-ip`;

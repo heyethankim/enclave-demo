@@ -109,7 +109,7 @@ const steps: WizardStep[] = [
   {
     id: "artifact",
     stepperLabel: "Generate",
-    title: "Generating your deployment artifact",
+    title: "Generating config package",
     body: "This may take a few minutes while we bundle your disconnected deployment.",
   },
 ];
@@ -146,6 +146,8 @@ export default function App() {
     useState(false);
   const [configureValidationFocusNonce, setConfigureValidationFocusNonce] =
     useState(0);
+  const [configureSubstepsComplete, setConfigureSubstepsComplete] =
+    useState(false);
   const [secureComply, setSecureComply] = useState<SecureComplyState>(() =>
     initialSecureComplyState(),
   );
@@ -187,6 +189,7 @@ export default function App() {
     if (step.id !== "configure") {
       setConfigureValidationAttempted(false);
       setConfigureValidationFocusNonce(0);
+      setConfigureSubstepsComplete(false);
     }
   }, [step.id]);
 
@@ -445,6 +448,7 @@ export default function App() {
                         : 0
                     }
                     showSubmitValidationErrors={showConfigureValidation}
+                    onConfigureSubstepsCompletionChange={setConfigureSubstepsComplete}
                   />
                 ) : null}
                 {step.id === "review" ? (
@@ -615,14 +619,17 @@ export default function App() {
                         step.id === "secure" &&
                         secureComply.dataResidencyRegionIds.length === 0
                           ? "Select at least one data residency region to continue."
-                          : undefined
+                          : step.id === "configure" && !configureSubstepsComplete
+                            ? "Complete all configure steps, then click Continue on the last step until you see Completed."
+                            : undefined
                       }
                       isDisabled={
                         isLast ||
                         (step.id === "flavor" &&
                           selectedSovereignFlavors.size === 0) ||
                         (step.id === "secure" &&
-                          secureComply.dataResidencyRegionIds.length === 0)
+                          secureComply.dataResidencyRegionIds.length === 0) ||
+                        (step.id === "configure" && !configureSubstepsComplete)
                       }
                       onClick={goNext}
                     >

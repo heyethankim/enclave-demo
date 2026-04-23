@@ -12,13 +12,18 @@ import {
 } from "@patternfly/react-core";
 import { ClipboardCheckIcon, CubeIcon } from "@patternfly/react-icons";
 
-export const ARTIFACT_SUCCESS_TITLE = "Artifact generated successfully";
+export const ARTIFACT_SUCCESS_TITLE =
+  "Your installer ISO and configuration file are ready to download";
 export const ARTIFACT_SUCCESS_SUBTITLE =
   "Your customized deployment artifact is ready for download.";
 
 export const ISO_ARTIFACT_NAME = "Enclave-Platform.iso";
 
 export const CONFIG_ARTIFACT_NAME = "enclave-deployment-config.yaml";
+
+/** Shown under download buttons in the success view (demo; not the tiny placeholder file sizes). */
+const ARTIFACT_ISO_DISPLAY_SIZE = "1.5 GB";
+const ARTIFACT_CONFIG_DISPLAY_SIZE = "500 KB";
 
 const DURATION_MS = 5000;
 
@@ -33,17 +38,28 @@ function triggerDownload(filename: string, content: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
+/** Demo placeholder body for the installer ISO (same bytes as download). */
+export function getInstallerIsoDemoBody(): string {
+  return `Enclave installer ISO — demo placeholder\n\nFilename: ${ISO_ARTIFACT_NAME}\nThis file stands in for the full bootable image in this UI prototype.\n`;
+}
+
+/** Demo YAML body for the deployment config (same bytes as download for a given timestamp). */
+export function buildDeploymentConfigYaml(generatedAtIso: string): string {
+  return `# Enclave deployment configuration (demo)\n# Generated: ${generatedAtIso}\n\napiVersion: enclave.demo/v1\nkind: DeploymentConfig\nmetadata:\n  name: enclave-trial\nspec:\n  profile: disconnected-bastion\n`;
+}
+
 /** Demo placeholder for the wizard (replace with real ISO in production). */
 export function downloadInstallerIso(): void {
-  const body = `Enclave installer ISO — demo placeholder\n\nFilename: ${ISO_ARTIFACT_NAME}\nThis file stands in for the full bootable image in this UI prototype.\n`;
-  triggerDownload(ISO_ARTIFACT_NAME, body, "application/octet-stream");
+  triggerDownload(ISO_ARTIFACT_NAME, getInstallerIsoDemoBody(), "application/octet-stream");
 }
 
 /** Demo deployment config download for the wizard. */
 export function downloadDeploymentConfig(): void {
-  const generatedAt = new Date().toISOString();
-  const yaml = `# Enclave deployment configuration (demo)\n# Generated: ${generatedAt}\n\napiVersion: enclave.demo/v1\nkind: DeploymentConfig\nmetadata:\n  name: enclave-trial\nspec:\n  profile: disconnected-bastion\n`;
-  triggerDownload(CONFIG_ARTIFACT_NAME, yaml, "text/yaml;charset=utf-8");
+  triggerDownload(
+    CONFIG_ARTIFACT_NAME,
+    buildDeploymentConfigYaml(new Date().toISOString()),
+    "text/yaml;charset=utf-8",
+  );
 }
 
 const STATUS_MESSAGES = [
@@ -141,56 +157,69 @@ function ArtifactSuccessView() {
             aria-label="Software bill of materials and signature"
           >
             <ul className="trial-artifact-success__provenance-list">
-              <li className="trial-artifact-success__provenance-item trial-artifact-success__provenance-item--sbom">
-                <CubeIcon
-                  className="trial-artifact-success__provenance-icon"
-                  aria-hidden
-                />
-                <div className="trial-artifact-success__provenance-item-title">
-                  SBOM available
+              <li className="trial-artifact-success__provenance-item">
+                <span className="trial-artifact-success__provenance-icon-wrap" aria-hidden>
+                  <CubeIcon className="trial-artifact-success__provenance-icon" />
+                </span>
+                <div className="trial-artifact-success__provenance-item-body">
+                  <div className="trial-artifact-success__provenance-item-title">
+                    SBOM available
+                  </div>
+                  <Content
+                    component="p"
+                    className="trial-artifact-success__provenance-item-desc"
+                  >
+                    Software Bill of Materials included for transparency
+                  </Content>
                 </div>
-                <Content
-                  component="p"
-                  className="trial-artifact-success__provenance-item-desc"
-                >
-                  Software Bill of Materials included for transparency
-                </Content>
               </li>
               <li className="trial-artifact-success__provenance-item">
-                <ClipboardCheckIcon
-                  className="trial-artifact-success__provenance-icon"
-                  aria-hidden
-                />
-                <div className="trial-artifact-success__provenance-item-title">
-                  Signature verified
+                <span className="trial-artifact-success__provenance-icon-wrap" aria-hidden>
+                  <ClipboardCheckIcon className="trial-artifact-success__provenance-icon" />
+                </span>
+                <div className="trial-artifact-success__provenance-item-body">
+                  <div className="trial-artifact-success__provenance-item-title">
+                    Signature verified
+                  </div>
+                  <Content
+                    component="p"
+                    className="trial-artifact-success__provenance-item-desc"
+                  >
+                    Cryptographically signed and verified
+                  </Content>
                 </div>
-                <Content
-                  component="p"
-                  className="trial-artifact-success__provenance-item-desc"
-                >
-                  Cryptographically signed and verified
-                </Content>
               </li>
             </ul>
           </section>
-          <div className="trial-artifact-success__cta">
-            <Button
-              variant="primary"
-              size="lg"
-              aria-label="Download installer ISO"
-              onClick={downloadInstallerIso}
-            >
-              Download installer ISO
-            </Button>
-            <Button
-              variant="secondary"
-              size="lg"
-              aria-label="Download config"
-              onClick={downloadDeploymentConfig}
-            >
-              Download config
-            </Button>
+          <div className="trial-artifact-success__cta" aria-label="Download options">
+            <div className="trial-artifact-success__download-wrap">
+              <Button
+                variant="primary"
+                size="lg"
+                aria-label="Download installer ISO"
+                onClick={downloadInstallerIso}
+              >
+                Download installer ISO
+              </Button>
+              <span className="trial-artifact-success__file-size">
+                {ARTIFACT_ISO_DISPLAY_SIZE}
+              </span>
+            </div>
+            <div className="trial-artifact-success__download-wrap">
+              <Button
+                variant="secondary"
+                size="lg"
+                aria-label="Download config"
+                onClick={downloadDeploymentConfig}
+              >
+                Download config
+              </Button>
+              <span className="trial-artifact-success__file-size">
+                {ARTIFACT_CONFIG_DISPLAY_SIZE}
+              </span>
+            </div>
           </div>
+          <Divider className="trial-artifact-success__post-download-divider" />
         </div>
       </StackItem>
       <StackItem>
