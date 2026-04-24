@@ -2002,7 +2002,8 @@ select.trial-configure-foundation__select.pf-v6-c-form-control::after {
 }
 
 .trial-data-residency-macro--americas-south {
-  --drm-accent: #e53e3e;
+  /* South America: same blue family as Americas (legend groups under Americas). */
+  --drm-accent: #2b6cb0;
   --drm-accent-soft: color-mix(in srgb, var(--drm-accent) 10%, #ffffff);
   --drm-accent-ring: color-mix(in srgb, var(--drm-accent) 24%, transparent);
 }

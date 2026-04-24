@@ -5,7 +5,7 @@ export const DATA_RESIDENCY_MAP_VIEW_HEIGHT = 418;
 /** Macro geography for map pegs, legend, and region card accents (see design reference). */
 export type DataResidencyMacro =
   | "americas"
-  /** South America peg (red); legend still groups under Americas. */
+  /** South America peg (blue); legend still groups under Americas. */
   | "americas-south"
   | "europe"
   | "asia-pacific"
