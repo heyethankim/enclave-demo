@@ -29,7 +29,7 @@ type FlavorOption = {
 const FLAVOR_CHIP_LABEL: Record<SovereignFlavorId, string> = {
   vm: "VM",
   cluster: "Cluster",
-  models: "Models",
+  models: "Model",
   baremetal: "Bare metal",
 };
 

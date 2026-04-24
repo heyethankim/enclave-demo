@@ -141,6 +141,16 @@ export const VM_NETWORK_MODE_OPTIONS = [
   "Transparent mode",
 ] as const;
 
+/** Model as a Service — inference runtime (configure + validation). */
+export const MODEL_RUNTIME_OPTIONS = [
+  "vLLM + NVIDIA Triton Inference Server",
+  "vLLM",
+  "TensorRT-LLM",
+  "Text Generation Inference (TGI)",
+  "OpenShift AI / KServe",
+  "ONNX Runtime",
+] as const;
+
 const INFRA_STORAGE_BACKEND_OPTIONS = [
   "OpenShift Data Foundation",
   "Ceph RBD",
@@ -151,6 +161,55 @@ const INFRA_STORAGE_BACKEND_OPTIONS = [
 ] as const;
 
 const INFRA_STORAGE_REPLICATION_OPTIONS = ["2", "3", "5"] as const;
+
+/** Infrastructure Storage — default Kubernetes / OpenShift StorageClass names (demo presets). */
+const INFRA_STORAGE_DEFAULT_CLASS_OPTIONS = [
+  "ceph-block",
+  "ceph-block-fast",
+  "ocs-storagecluster-ceph-rbd",
+  "thin",
+  "gold",
+  "managed-premium",
+  "portworx-db-sc",
+  "trident-nfs",
+] as const;
+
+/**
+ * Kubernetes-style volume/disk sizes — Infrastructure default disk size and VM default disk size.
+ */
+export const KUBE_VOLUME_SIZE_OPTIONS = [
+  "50Gi",
+  "100Gi",
+  "150Gi",
+  "200Gi",
+  "250Gi",
+  "500Gi",
+  "1Ti",
+  "2Ti",
+] as const;
+
+/** Infrastructure Storage performance — IOPS limit presets. */
+const INFRA_STORAGE_IOPS_LIMIT_OPTIONS = [
+  "4000",
+  "8000",
+  "12000",
+  "16000",
+  "24000",
+  "32000",
+  "48000",
+  "64000",
+] as const;
+
+/** Infrastructure Storage performance — throughput (aligned with prior random “N MiB/s” format). */
+const INFRA_STORAGE_THROUGHPUT_LIMIT_OPTIONS = [
+  "250 MiB/s",
+  "400 MiB/s",
+  "500 MiB/s",
+  "750 MiB/s",
+  "1000 MiB/s",
+  "1500 MiB/s",
+  "2000 MiB/s",
+] as const;
 
 const INFRA_STORAGE_BINDING_MODE_OPTIONS = [
   "Immediate",
@@ -173,12 +232,11 @@ function randomInfraStorageFields(): Pick<
   | "storagePerfIopsLimit"
   | "storagePerfThroughputLimit"
 > {
-  const sizeGi = 50 + Math.floor(Math.random() * 5) * 50;
   const randBool = () => Math.random() > 0.35;
   return {
     storageBackend: pickRandom(INFRA_STORAGE_BACKEND_OPTIONS),
-    storageDefaultClass: `ceph-block-${Math.floor(Math.random() * 90 + 10)}`,
-    storageDefaultVolumeSize: `${sizeGi}Gi`,
+    storageDefaultClass: pickRandom(INFRA_STORAGE_DEFAULT_CLASS_OPTIONS),
+    storageDefaultVolumeSize: pickRandom(KUBE_VOLUME_SIZE_OPTIONS),
     storageReplicationFactor: pickRandom(INFRA_STORAGE_REPLICATION_OPTIONS),
     storageVolumeBindingMode: pickRandom(INFRA_STORAGE_BINDING_MODE_OPTIONS),
     storageFeatPvPvc: randBool(),
@@ -187,8 +245,8 @@ function randomInfraStorageFields(): Pick<
     storageFeatVolumeSnapshots: randBool(),
     storageFeatVolumeExpansion: randBool(),
     storageFeatCsiDrivers: randBool(),
-    storagePerfIopsLimit: String(4000 + Math.floor(Math.random() * 16000)),
-    storagePerfThroughputLimit: `${200 + Math.floor(Math.random() * 800)} MiB/s`,
+    storagePerfIopsLimit: pickRandom(INFRA_STORAGE_IOPS_LIMIT_OPTIONS),
+    storagePerfThroughputLimit: pickRandom(INFRA_STORAGE_THROUGHPUT_LIMIT_OPTIONS),
   };
 }
 
@@ -260,7 +318,7 @@ function randomVmWorkloadFields(): VmWorkloadRandomFields {
     ...inst,
     ...os,
     vmDiskProvisioningType: pickRandom(VM_DISK_PROVISIONING_OPTIONS),
-    vmDefaultDiskSize: `${40 + Math.floor(Math.random() * 6) * 20}Gi`,
+    vmDefaultDiskSize: pickRandom(KUBE_VOLUME_SIZE_OPTIONS),
     vmNetworkMode: pickRandom(VM_NETWORK_MODE_OPTIONS),
     vmVlanEnabled: Math.random() > 0.5,
   };
@@ -573,7 +631,6 @@ export function initialFormState(flavorId: SovereignFlavorId): FormState {
   if (mode === "full") {
     return initialTriadFormState(flavorId as TriadFlavorId);
   }
-  const tok = Math.random().toString(36).slice(2, 7);
   return {
     ...initialModelsBasic(),
     apiVip: "",
@@ -581,7 +638,7 @@ export function initialFormState(flavorId: SovereignFlavorId): FormState {
     machineNetwork: "",
     hosts: [],
     ...workloadDefaults(),
-    modelRuntime: `vLLM 0.5.3 + Triton (${tok})`,
+    modelRuntime: pickRandom(MODEL_RUNTIME_OPTIONS),
   };
 }
 
@@ -698,10 +755,10 @@ export function validationMessagesForForm(
       messages.push("Select a storage backend.");
     }
     if (form.storageDefaultClass.trim() === "") {
-      messages.push("Enter default storage class.");
+      messages.push("Select default storage class.");
     }
     if (form.storageDefaultVolumeSize.trim() === "") {
-      messages.push("Enter default volume size.");
+      messages.push("Select default disk size.");
     }
     if (form.storageReplicationFactor.trim() === "") {
       messages.push("Select replication factor.");
@@ -710,10 +767,10 @@ export function validationMessagesForForm(
       messages.push("Select volume binding mode.");
     }
     if (form.storagePerfIopsLimit.trim() === "") {
-      messages.push("Enter IOPS limit.");
+      messages.push("Select IOPS limit.");
     }
     if (form.storagePerfThroughputLimit.trim() === "") {
-      messages.push("Enter throughput limit.");
+      messages.push("Select throughput limit.");
     }
     form.hosts.forEach((host, index) => {
       messages.push(...validationAgentHostFields(host, `Host ${index + 1}`));
@@ -744,7 +801,7 @@ export function validationMessagesForForm(
       messages.push("Select disk provisioning type.");
     }
     if (form.vmDefaultDiskSize.trim() === "") {
-      messages.push("Enter default disk size.");
+      messages.push("Select default disk size.");
     }
     if (form.vmNetworkMode.trim() === "") {
       messages.push("Select network mode.");
@@ -753,7 +810,7 @@ export function validationMessagesForForm(
 
   if (flavorId === "models") {
     if (form.modelRuntime.trim() === "") {
-      messages.push("Enter model runtime.");
+      messages.push("Select model runtime.");
     }
     const anyModel =
       form.modelIbmGranite ||
@@ -940,7 +997,7 @@ function FlavorConfigureReadOnlySummary({
           <div className="trial-review-summary__rows">
             {row("Storage backend", form.storageBackend || "—", true)}
             {row("Default storage class", form.storageDefaultClass || "—", true)}
-            {row("Default volume size", form.storageDefaultVolumeSize || "—", true)}
+            {row("Default disk size", form.storageDefaultVolumeSize || "—", true)}
             {row("Replication factor", form.storageReplicationFactor || "—", true)}
             {row("Volume binding mode", form.storageVolumeBindingMode || "—", true)}
           </div>
@@ -1408,60 +1465,76 @@ export function FlavorConfigureFields({
               isRequired
             >
               <Fragment>
-                <TextInput
+                <select
                   id={id("storage-default-class")}
-                  name={`${p}StorageDefaultClass`}
-                  value={form.storageDefaultClass}
-                  isRequired
-                  validated={showStorageClassError ? "error" : "default"}
+                  className="pf-v6-c-form-control trial-configure-foundation__select"
                   aria-invalid={showStorageClassError}
                   aria-describedby={
                     showStorageClassError ? storageDefaultClassHelperId : undefined
                   }
-                  onChange={(_e, v) =>
-                    onFormChange({ ...form, storageDefaultClass: v })
+                  value={form.storageDefaultClass}
+                  onChange={(e) =>
+                    onFormChange({
+                      ...form,
+                      storageDefaultClass: e.currentTarget.value,
+                    })
                   }
                   aria-label="Default storage class"
-                />
+                >
+                  <option value="">Select default storage class</option>
+                  {INFRA_STORAGE_DEFAULT_CLASS_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
                 {showStorageClassError ? (
                   <FormHelperText
                     id={storageDefaultClassHelperId}
                     className="trial-field-helper--error"
                   >
-                    Enter default storage class.
+                    Select default storage class.
                   </FormHelperText>
                 ) : null}
               </Fragment>
             </FormGroup>
             <FormGroup
-              label="Default volume size"
+              label="Default disk size"
               fieldId={id("storage-default-volume-size")}
               isRequired
             >
               <Fragment>
-                <TextInput
+                <select
                   id={id("storage-default-volume-size")}
-                  name={`${p}StorageDefaultVolumeSize`}
-                  value={form.storageDefaultVolumeSize}
-                  isRequired
-                  validated={showStorageVolSizeError ? "error" : "default"}
+                  className="pf-v6-c-form-control trial-configure-foundation__select"
                   aria-invalid={showStorageVolSizeError}
                   aria-describedby={
                     showStorageVolSizeError
                       ? storageDefaultVolumeSizeHelperId
                       : undefined
                   }
-                  onChange={(_e, v) =>
-                    onFormChange({ ...form, storageDefaultVolumeSize: v })
+                  value={form.storageDefaultVolumeSize}
+                  onChange={(e) =>
+                    onFormChange({
+                      ...form,
+                      storageDefaultVolumeSize: e.currentTarget.value,
+                    })
                   }
-                  aria-label="Default volume size"
-                />
+                  aria-label="Default disk size"
+                >
+                  <option value="">Select default disk size</option>
+                  {KUBE_VOLUME_SIZE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
                 {showStorageVolSizeError ? (
                   <FormHelperText
                     id={storageDefaultVolumeSizeHelperId}
                     className="trial-field-helper--error"
                   >
-                    Enter default volume size.
+                    Select default disk size.
                   </FormHelperText>
                 ) : null}
               </Fragment>
@@ -1504,7 +1577,7 @@ export function FlavorConfigureFields({
                 ) : null}
               </Fragment>
             </FormGroup>
-            <div className="trial-configure-summary__vm-network-grid__full">
+            <div className="trial-infra-storage-binding-mode">
               <FormGroup
                 label="Volume binding mode"
                 fieldId={id("storage-binding-mode")}
@@ -1668,27 +1741,35 @@ export function FlavorConfigureFields({
           <div className="trial-infra-storage-perf-grid">
             <FormGroup label="IOPS limit" fieldId={id("storage-iops")} isRequired>
               <Fragment>
-                <TextInput
+                <select
                   id={id("storage-iops")}
-                  name={`${p}StorageIopsLimit`}
-                  value={form.storagePerfIopsLimit}
-                  isRequired
-                  validated={showStorageIopsError ? "error" : "default"}
+                  className="pf-v6-c-form-control trial-configure-foundation__select"
                   aria-invalid={showStorageIopsError}
                   aria-describedby={
                     showStorageIopsError ? storageIopsHelperId : undefined
                   }
-                  onChange={(_e, v) =>
-                    onFormChange({ ...form, storagePerfIopsLimit: v })
+                  value={form.storagePerfIopsLimit}
+                  onChange={(e) =>
+                    onFormChange({
+                      ...form,
+                      storagePerfIopsLimit: e.currentTarget.value,
+                    })
                   }
                   aria-label="IOPS limit"
-                />
+                >
+                  <option value="">Select IOPS limit</option>
+                  {INFRA_STORAGE_IOPS_LIMIT_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
                 {showStorageIopsError ? (
                   <FormHelperText
                     id={storageIopsHelperId}
                     className="trial-field-helper--error"
                   >
-                    Enter IOPS limit.
+                    Select IOPS limit.
                   </FormHelperText>
                 ) : null}
               </Fragment>
@@ -1699,27 +1780,37 @@ export function FlavorConfigureFields({
               isRequired
             >
               <Fragment>
-                <TextInput
+                <select
                   id={id("storage-throughput")}
-                  name={`${p}StorageThroughputLimit`}
-                  value={form.storagePerfThroughputLimit}
-                  isRequired
-                  validated={showStorageThroughputError ? "error" : "default"}
+                  className="pf-v6-c-form-control trial-configure-foundation__select"
                   aria-invalid={showStorageThroughputError}
                   aria-describedby={
-                    showStorageThroughputError ? storageThroughputHelperId : undefined
+                    showStorageThroughputError
+                      ? storageThroughputHelperId
+                      : undefined
                   }
-                  onChange={(_e, v) =>
-                    onFormChange({ ...form, storagePerfThroughputLimit: v })
+                  value={form.storagePerfThroughputLimit}
+                  onChange={(e) =>
+                    onFormChange({
+                      ...form,
+                      storagePerfThroughputLimit: e.currentTarget.value,
+                    })
                   }
                   aria-label="Throughput limit"
-                />
+                >
+                  <option value="">Select throughput limit</option>
+                  {INFRA_STORAGE_THROUGHPUT_LIMIT_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
                 {showStorageThroughputError ? (
                   <FormHelperText
                     id={storageThroughputHelperId}
                     className="trial-field-helper--error"
                   >
-                    Enter throughput limit.
+                    Select throughput limit.
                   </FormHelperText>
                 ) : null}
               </Fragment>

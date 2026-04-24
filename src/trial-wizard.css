@@ -1088,8 +1088,6 @@
 
 .trial-workload-models-config .trial-workload-models-group + .trial-workload-models-group {
   margin-top: var(--pf-t--global--spacer--lg);
-  padding-top: var(--pf-t--global--spacer--lg);
-  border-top: 1px solid var(--trial-border);
 }
 
 .trial-workload-models-config .trial-workload-models-group .trial-configure-foundation__muted-label {
@@ -1106,8 +1104,6 @@
 
 .trial-workload-models-config .trial-workload-models-runtime {
   margin-top: var(--pf-t--global--spacer--lg);
-  padding-top: var(--pf-t--global--spacer--lg);
-  border-top: 1px solid var(--trial-border);
 }
 
 .trial-workload-models-config .trial-workload-models-runtime .pf-v6-c-form__group {
@@ -1374,16 +1370,24 @@ select.trial-configure-foundation__select.pf-v6-c-form-control::after {
   margin-bottom: var(--pf-t--global--spacer--md);
 }
 
-/* VM review: breathing room before Storage / Network subsections */
-.trial-vm-review-storage-heading.pf-v6-c-title,
-.trial-vm-review-network-heading.pf-v6-c-title {
-  margin-top: var(--pf-t--global--spacer--2xl);
+/*
+ * VM review: Storage title is first in a vm-subsection after another subsection —
+ * avoid doubling with .trial-configure-summary__vm-subsection + .vm-subsection margin.
+ */
+.trial-vm-workload-config .trial-vm-review-storage-heading.pf-v6-c-title {
+  margin-top: 0;
   margin-bottom: var(--pf-t--global--spacer--md);
 }
 
-/* Bare Metal review: space above Agent host */
+/* VM review: match Infrastructure-style gap before Network (same as vm-subsection stack) */
+.trial-vm-review-network-heading.pf-v6-c-title {
+  margin-top: var(--pf-t--global--spacer--xl);
+  margin-bottom: var(--pf-t--global--spacer--md);
+}
+
+/* Bare Metal review: Agent host follows service title — keep gap tight */
 .trial-bm-review-agent-host-heading.pf-v6-c-title {
-  margin-top: var(--pf-t--global--spacer--2xl);
+  margin-top: 0;
   margin-bottom: var(--pf-t--global--spacer--md);
 }
 
@@ -1440,6 +1444,26 @@ select.trial-configure-foundation__select.pf-v6-c-form-control::after {
 
 .trial-configure-summary__vm-network-grid__full {
   grid-column: 1 / -1;
+}
+
+/*
+ * Infrastructure Storage: Volume binding mode — own row, width matches one grid column
+ * (same as Default disk size: 2 columns with column-gap --pf spacer lg).
+ */
+.trial-infra-storage-binding-mode {
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+  max-width: calc((100% - var(--pf-t--global--spacer--lg)) / 2);
+  min-width: 0;
+}
+
+.trial-infra-storage-binding-mode .pf-v6-c-form__group {
+  max-width: 100%;
+}
+
+.trial-infra-storage-binding-mode select.trial-configure-foundation__select {
+  width: 100%;
+  max-width: 100%;
 }
 
 .trial-configure-summary__vm-network-grid .pf-v6-c-form__group {

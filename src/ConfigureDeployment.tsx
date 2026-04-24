@@ -29,6 +29,8 @@ import {
   FlavorConfigureFields,
   infrastructureFlavorIdForConfigure,
   mergeConfigureForm,
+  KUBE_VOLUME_SIZE_OPTIONS,
+  MODEL_RUNTIME_OPTIONS,
   VM_DISK_PROVISIONING_OPTIONS,
   VM_NETWORK_MODE_OPTIONS,
 } from "./TriadFlavorConfigureFields";
@@ -694,110 +696,115 @@ function VmWorkloadBlock({
         role="group"
         aria-label="VM as a Service workload settings"
       >
-        <p
-          className="trial-configure-foundation__muted-label"
-          id="trial-workload-vm-instance-types-label"
-        >
-          Default instance types
-          <TrialConfigureRequiredMark />
-        </p>
-        <div
-          className="trial-workload-model-checkboxes"
-          role="group"
-          aria-labelledby="trial-workload-vm-instance-types-label"
-          aria-invalid={showInstanceErr}
-          aria-describedby={showInstanceErr ? instanceHelperId : undefined}
-        >
-          {checkboxRow(
-            "trial-vm-inst-small",
-            "Small (2 vCPU, 4 GB RAM)",
-            "vmInstanceSmall",
-            form.vmInstanceSmall,
-          )}
-          {checkboxRow(
-            "trial-vm-inst-medium",
-            "Medium (4 vCPU, 8 GB RAM)",
-            "vmInstanceMedium",
-            form.vmInstanceMedium,
-          )}
-          {checkboxRow(
-            "trial-vm-inst-large",
-            "Large (8 vCPU, 16 GB RAM)",
-            "vmInstanceLarge",
-            form.vmInstanceLarge,
-          )}
-          {checkboxRow(
-            "trial-vm-inst-xlarge",
-            "X-Large (16 vCPU, 32 GB RAM)",
-            "vmInstanceXLarge",
-            form.vmInstanceXLarge,
-          )}
-          {checkboxRow(
-            "trial-vm-inst-gpu",
-            "GPU (4 vCPU, 16 GB RAM, GPU)",
-            "vmInstanceGpu",
-            form.vmInstanceGpu,
-          )}
+        <div className="trial-configure-summary__vm-subsection">
+          <p
+            className="trial-configure-foundation__muted-label"
+            id="trial-workload-vm-instance-types-label"
+          >
+            Default instance types
+            <TrialConfigureRequiredMark />
+          </p>
+          <div
+            className="trial-workload-model-checkboxes"
+            role="group"
+            aria-labelledby="trial-workload-vm-instance-types-label"
+            aria-invalid={showInstanceErr}
+            aria-describedby={showInstanceErr ? instanceHelperId : undefined}
+          >
+            {checkboxRow(
+              "trial-vm-inst-small",
+              "Small (2 vCPU, 4 GB RAM)",
+              "vmInstanceSmall",
+              form.vmInstanceSmall,
+            )}
+            {checkboxRow(
+              "trial-vm-inst-medium",
+              "Medium (4 vCPU, 8 GB RAM)",
+              "vmInstanceMedium",
+              form.vmInstanceMedium,
+            )}
+            {checkboxRow(
+              "trial-vm-inst-large",
+              "Large (8 vCPU, 16 GB RAM)",
+              "vmInstanceLarge",
+              form.vmInstanceLarge,
+            )}
+            {checkboxRow(
+              "trial-vm-inst-xlarge",
+              "X-Large (16 vCPU, 32 GB RAM)",
+              "vmInstanceXLarge",
+              form.vmInstanceXLarge,
+            )}
+            {checkboxRow(
+              "trial-vm-inst-gpu",
+              "GPU (4 vCPU, 16 GB RAM, GPU)",
+              "vmInstanceGpu",
+              form.vmInstanceGpu,
+            )}
+          </div>
+          {showInstanceErr ? (
+            <FormHelperText id={instanceHelperId} className="trial-field-helper--error">
+              Select at least one default instance type.
+            </FormHelperText>
+          ) : null}
         </div>
-        {showInstanceErr ? (
-          <FormHelperText id={instanceHelperId} className="trial-field-helper--error">
-            Select at least one default instance type.
-          </FormHelperText>
-        ) : null}
 
-        <p
-          className="trial-configure-foundation__muted-label"
-          id="trial-workload-vm-os-images-label"
-        >
-          Operating system images
-          <TrialConfigureRequiredMark />
-        </p>
-        <div
-          className="trial-vm-os-images-grid"
-          role="group"
-          aria-labelledby="trial-workload-vm-os-images-label"
-          aria-invalid={showOsErr}
-          aria-describedby={showOsErr ? osHelperId : undefined}
-        >
-          {VM_OS_IMAGE_OPTIONS.map((opt) => {
-            const checked = form[opt.key];
-            return (
-              <label key={opt.id} className="trial-vm-os-image-card" htmlFor={opt.id}>
-                <input
-                  id={opt.id}
-                  type="checkbox"
-                  className="trial-workload-checkbox-row__input trial-vm-os-image-card__input"
-                  checked={checked}
-                  disabled={readOnly}
-                  onChange={(e) => toggle(opt.key, e.target.checked)}
-                />
-                <span className="trial-vm-os-image-card__logo-wrap" aria-hidden>
-                  <img src={opt.logoSrc} alt="" className="trial-vm-os-image-card__logo" />
-                </span>
-                <span className="trial-vm-os-image-card__label">{opt.label}</span>
-              </label>
-            );
-          })}
+        <div className="trial-configure-summary__vm-subsection">
+          <p
+            className="trial-configure-foundation__muted-label"
+            id="trial-workload-vm-os-images-label"
+          >
+            Operating system images
+            <TrialConfigureRequiredMark />
+          </p>
+          <div
+            className="trial-vm-os-images-grid"
+            role="group"
+            aria-labelledby="trial-workload-vm-os-images-label"
+            aria-invalid={showOsErr}
+            aria-describedby={showOsErr ? osHelperId : undefined}
+          >
+            {VM_OS_IMAGE_OPTIONS.map((opt) => {
+              const checked = form[opt.key];
+              return (
+                <label key={opt.id} className="trial-vm-os-image-card" htmlFor={opt.id}>
+                  <input
+                    id={opt.id}
+                    type="checkbox"
+                    className="trial-workload-checkbox-row__input trial-vm-os-image-card__input"
+                    checked={checked}
+                    disabled={readOnly}
+                    onChange={(e) => toggle(opt.key, e.target.checked)}
+                  />
+                  <span className="trial-vm-os-image-card__logo-wrap" aria-hidden>
+                    <img src={opt.logoSrc} alt="" className="trial-vm-os-image-card__logo" />
+                  </span>
+                  <span className="trial-vm-os-image-card__label">{opt.label}</span>
+                </label>
+              );
+            })}
+          </div>
+          {showOsErr ? (
+            <FormHelperText id={osHelperId} className="trial-field-helper--error">
+              Select at least one operating system image.
+            </FormHelperText>
+          ) : null}
         </div>
-        {showOsErr ? (
-          <FormHelperText id={osHelperId} className="trial-field-helper--error">
-            Select at least one operating system image.
-          </FormHelperText>
-        ) : null}
 
-        <Title
-          id="trial-workload-vm-storage-heading"
-          headingLevel="h4"
-          size="md"
-          className="trial-configure-summary__subsection-title"
-        >
-          Storage provisioning
-        </Title>
-        <div
-          className="trial-configure-foundation__field-grid"
-          role="group"
-          aria-labelledby="trial-workload-vm-storage-heading"
-        >
+        <div className="trial-configure-summary__vm-subsection">
+          <Title
+            id="trial-workload-vm-storage-heading"
+            headingLevel="h4"
+            size="md"
+            className="trial-configure-summary__subsection-title"
+          >
+            Storage provisioning
+          </Title>
+          <div
+            className="trial-configure-foundation__field-grid"
+            role="group"
+            aria-labelledby="trial-workload-vm-storage-heading"
+          >
           <FormGroup label="Disk provisioning type" fieldId="trial-vm-disk-type" isRequired>
             <Fragment>
               <select
@@ -830,42 +837,49 @@ function VmWorkloadBlock({
           </FormGroup>
           <FormGroup label="Default disk size" fieldId="trial-vm-disk-size" isRequired>
             <Fragment>
-              <TextInput
+              <select
                 id="trial-vm-disk-size"
+                className="trial-configure-foundation__select pf-v6-c-form-control"
                 value={form.vmDefaultDiskSize}
-                isRequired
-                validated={showDiskSizeErr ? "error" : "default"}
+                disabled={readOnly}
                 aria-invalid={showDiskSizeErr}
                 aria-describedby={showDiskSizeErr ? diskSizeHelperId : undefined}
-                {...ro}
-                onChange={
-                  readOnly ? () => {} : (_e, v) => onChange({ ...form, vmDefaultDiskSize: v })
-                }
                 aria-label="Default disk size"
-                placeholder="e.g. 80Gi"
-              />
+                onChange={
+                  readOnly
+                    ? undefined
+                    : (e) => onChange({ ...form, vmDefaultDiskSize: e.target.value })
+                }
+              >
+                <option value="">Select default disk size</option>
+                {KUBE_VOLUME_SIZE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
               {showDiskSizeErr ? (
                 <FormHelperText id={diskSizeHelperId} className="trial-field-helper--error">
-                  Enter default disk size.
+                  Select default disk size.
                 </FormHelperText>
               ) : null}
             </Fragment>
           </FormGroup>
         </div>
 
-        <Title
-          id="trial-workload-vm-network-heading"
-          headingLevel="h4"
-          size="md"
-          className="trial-configure-summary__subsection-title trial-vm-network-heading"
-        >
-          Network configuration
-        </Title>
-        <div
-          className="trial-configure-foundation__field-grid trial-configure-foundation__field-grid--vm-network"
-          role="group"
-          aria-labelledby="trial-workload-vm-network-heading"
-        >
+          <Title
+            id="trial-workload-vm-network-heading"
+            headingLevel="h4"
+            size="md"
+            className="trial-configure-summary__subsection-title trial-vm-network-heading"
+          >
+            Network configuration
+          </Title>
+          <div
+            className="trial-configure-foundation__field-grid trial-configure-foundation__field-grid--vm-network"
+            role="group"
+            aria-labelledby="trial-workload-vm-network-heading"
+          >
           <FormGroup label="Network mode" fieldId="trial-vm-net-mode" isRequired>
             <Fragment>
               <select
@@ -907,6 +921,7 @@ function VmWorkloadBlock({
             />
             <span className="trial-workload-checkbox-row__label">Enable VLAN support</span>
           </label>
+          </div>
         </div>
       </div>
     </section>
@@ -1135,22 +1150,30 @@ function ModelsWorkloadBlock({
         <div className="trial-workload-models-runtime">
         <FormGroup label="Model runtime" fieldId="trial-model-runtime" isRequired>
           <Fragment>
-            <TextInput
+            <select
               id="trial-model-runtime"
+              className="trial-configure-foundation__select pf-v6-c-form-control"
               value={form.modelRuntime}
-              isRequired
-              validated={showRuntimeErr ? "error" : "default"}
+              disabled={readOnly}
               aria-invalid={showRuntimeErr}
               aria-describedby={showRuntimeErr ? runtimeHelperId : undefined}
-              {...ro}
-              onChange={
-                readOnly ? () => {} : (_e, v) => onChange({ ...form, modelRuntime: v })
-              }
               aria-label="Model runtime"
-            />
+              onChange={
+                readOnly
+                  ? undefined
+                  : (e) => onChange({ ...form, modelRuntime: e.target.value })
+              }
+            >
+              <option value="">Select model runtime</option>
+              {MODEL_RUNTIME_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
             {showRuntimeErr ? (
               <FormHelperText id={runtimeHelperId} className="trial-field-helper--error">
-                Enter model runtime.
+                Select model runtime.
               </FormHelperText>
             ) : null}
           </Fragment>
@@ -1214,7 +1237,7 @@ function WorkloadReadOnlySummary({
   return (
     <div className="trial-configure-foundation__workload-readonly">
       {selected.has("vm") ? (
-        <section className="trial-configure-foundation__subsection">
+        <section className="trial-configure-foundation__subsection trial-vm-workload-config">
           <div className="trial-configure-workload__subsection-head trial-configure-summary__title-with-icon">
             <span className="trial-configure-workload__subsection-icon" aria-hidden>
               <CubesFlavorIcon />
@@ -1224,6 +1247,7 @@ function WorkloadReadOnlySummary({
             </Title>
           </div>
           <div className="trial-configure-service-rail-body">
+          <div className="trial-configure-summary__vm-subsection">
           <Title
             id="trial-workload-vm-instance-review-heading"
             headingLevel="h4"
@@ -1261,6 +1285,8 @@ function WorkloadReadOnlySummary({
               </span>
             </Fragment>
           </div>
+          </div>
+          <div className="trial-configure-summary__vm-subsection">
           <Title
             id="trial-workload-vm-os-review-heading"
             headingLevel="h4"
@@ -1305,6 +1331,8 @@ function WorkloadReadOnlySummary({
               </span>
             </Fragment>
           </div>
+          </div>
+          <div className="trial-configure-summary__vm-subsection">
           <Title
             id="trial-workload-vm-storage-review-heading"
             headingLevel="h4"
@@ -1337,6 +1365,7 @@ function WorkloadReadOnlySummary({
           >
             {row("Network mode", vmRo.vmNetworkMode || "—", true)}
             {row("VLAN support", yn(vmRo.vmVlanEnabled))}
+          </div>
           </div>
           </div>
         </section>
