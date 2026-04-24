@@ -1851,6 +1851,34 @@ select.trial-configure-foundation__select.pf-v6-c-form-control::after {
   line-height: 1.5;
 }
 
+/*
+ * Artifact success: floating OSAC hub — PatternFly secondary `Button` as link;
+ * layout + rectangle only (colors from PF secondary).
+ */
+.trial-osac-hub-fab.pf-v6-c-button {
+  position: fixed;
+  z-index: 200;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: max(7rem, calc(env(safe-area-inset-bottom, 0px) + 5.75rem));
+  left: auto;
+  max-width: min(18rem, calc(100vw - 2rem));
+  border-radius: 6px;
+  border: 1px solid var(--trial-border, #d0d0d0) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, #000000 14%, transparent);
+  text-align: center;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.trial-osac-hub-fab.pf-v6-c-button:hover {
+  text-decoration: none;
+  transform: translateY(-1px);
+  border: 1px solid color-mix(in srgb, var(--trial-ink, #151515) 18%, var(--trial-border, #d0d0d0)) !important;
+  box-shadow: 0 6px 18px color-mix(in srgb, #000000 18%, transparent);
+}
+
 /* Secure & Comply step */
 .trial-secure-comply {
   width: 100%;

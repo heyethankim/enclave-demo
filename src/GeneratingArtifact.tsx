@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   ClipboardCopy,
@@ -20,6 +20,9 @@ export const ARTIFACT_SUCCESS_SUBTITLE =
 export const ISO_ARTIFACT_NAME = "Enclave-Platform.iso";
 
 export const CONFIG_ARTIFACT_NAME = "enclave-deployment-config.yaml";
+
+/** OSAC prototype hub — floating link on the artifact success screen. */
+export const OSAC_PROTOTYPE_HUB_URL = "https://heyethankim.github.io/osac-demo/";
 
 /** Shown under download buttons in the success view (demo; not the tiny placeholder file sizes). */
 const ARTIFACT_ISO_DISPLAY_SIZE = "1.5 GB";
@@ -149,6 +152,7 @@ function ArtifactSuccessView() {
   );
 
   return (
+    <Fragment>
     <Stack hasGutter className="trial-artifact-success">
       <StackItem className="trial-artifact-success__hero-item">
         <div className="trial-artifact-success__hero">
@@ -268,6 +272,16 @@ function ArtifactSuccessView() {
         </ClipboardCopy>
       </StackItem>
     </Stack>
+    <Button
+      variant="secondary"
+      component="a"
+      href={OSAC_PROTOTYPE_HUB_URL}
+      rel="noopener noreferrer"
+      className="trial-osac-hub-fab"
+    >
+      Red Hat OSAC Prototypes
+    </Button>
+    </Fragment>
   );
 }
 
