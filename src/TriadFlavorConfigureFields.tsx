@@ -23,7 +23,7 @@ export type AgentHost = {
   redfishPassword: string;
 };
 
-/** Cluster as a Service — workload tab (cluster nodes). */
+/** Cluster as a Service — workload tab (nodes). */
 export type ClusterWorkloadNode = {
   id: string;
   name: string;
@@ -69,7 +69,7 @@ export type FormState = {
   gpuInstallCudaToolkit: boolean;
   /** Model as a Service — inference runtime identifier */
   modelRuntime: string;
-  /** Cluster as a Service — workload (cluster nodes + scaling options) */
+  /** Cluster as a Service — workload (nodes + scaling options) */
   clusterWorkloadNodes: ClusterWorkloadNode[];
   clusterHaEnabled: boolean;
   clusterAutoscaleEnabled: boolean;
@@ -630,7 +630,7 @@ export function validationClusterWorkloadNode1HostMessages(form: FormState): str
 export function validationClusterWorkloadMessages(form: FormState): string[] {
   const messages: string[] = [];
   if (form.clusterWorkloadNodes.length === 0) {
-    messages.push("Add at least one cluster node.");
+    messages.push("Add at least one node.");
     return messages;
   }
   form.clusterWorkloadNodes.forEach((n, index) => {
@@ -639,19 +639,19 @@ export function validationClusterWorkloadMessages(form: FormState): string[] {
     }
     const h = index + 1;
     if (n.name.trim() === "") {
-      messages.push(`Cluster node ${h}: Enter a node name.`);
+      messages.push(`Node ${h}: Enter a node name.`);
     }
     if (!n.nodeRole || n.nodeRole.trim() === "") {
-      messages.push(`Cluster node ${h}: Select a node role.`);
+      messages.push(`Node ${h}: Select a node role.`);
     }
     if (n.cpuCores.trim() === "") {
-      messages.push(`Cluster node ${h}: Enter CPU cores.`);
+      messages.push(`Node ${h}: Enter CPU cores.`);
     }
     if (n.memoryGb.trim() === "") {
-      messages.push(`Cluster node ${h}: Enter memory (GB).`);
+      messages.push(`Node ${h}: Enter memory (GB).`);
     }
     if (n.storageGb.trim() === "") {
-      messages.push(`Cluster node ${h}: Enter storage (GB).`);
+      messages.push(`Node ${h}: Enter storage (GB).`);
     }
   });
   return messages;

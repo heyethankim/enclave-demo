@@ -128,10 +128,12 @@ function firstEditorStepIndexWithValidationIssue(
 
     if (infraId != null && flavorId === infraId) {
       if (flavorId === "cluster") {
-        const hasInfraMessage = messages.some((m) => !m.includes("Cluster node"));
-        const hasWorkloadMessage = messages.some(
-          (m) => m.includes("Cluster node") || m.includes("Node 1:"),
+        const isClusterWorkloadValidationMessage = (m: string) =>
+          m.includes("Add at least one node") || /^Node \d+: /.test(m);
+        const hasInfraMessage = messages.some(
+          (m) => !isClusterWorkloadValidationMessage(m),
         );
+        const hasWorkloadMessage = messages.some(isClusterWorkloadValidationMessage);
         if (hasInfraMessage && infraStepIdx >= 0) {
           return infraStepIdx;
         }
@@ -373,7 +375,7 @@ function ClusterWorkloadBlock({
             size="md"
             className="trial-configure-summary__subsection-title trial-configure-summary__subsection-title--inline"
           >
-            Cluster nodes
+            Nodes
           </Title>
           {!readOnly ? (
             <Button variant="secondary" type="button" onClick={addNode}>
@@ -387,7 +389,7 @@ function ClusterWorkloadBlock({
           className="trial-cluster-workload-day2-alert"
           title="Manage your cluster anytime"
         >
-          You can add, remove, or modify cluster nodes at any time after deployment through the
+          You can add, remove, or modify nodes at any time after deployment through the
           management interface. This allows you to scale and update your infrastructure without
           downtime.
         </Alert>
@@ -468,7 +470,7 @@ function ClusterWorkloadBlock({
                           ? () => {}
                           : (_e, v) => updateNode(node.id, { name: v })
                       }
-                      aria-label={`Cluster node ${index + 1} name`}
+                      aria-label={`Node ${index + 1} name`}
                     />
                     {showNameErr ? (
                       <FormHelperText id={nameHelperId} className="trial-field-helper--error">
@@ -486,7 +488,7 @@ function ClusterWorkloadBlock({
                       disabled={readOnly}
                       aria-invalid={showRoleErr}
                       aria-describedby={showRoleErr ? roleHelperId : undefined}
-                      aria-label={`Cluster node ${index + 1} role`}
+                      aria-label={`Node ${index + 1} role`}
                       onChange={
                         readOnly
                           ? undefined
@@ -521,7 +523,7 @@ function ClusterWorkloadBlock({
                           ? () => {}
                           : (_e, v) => updateNode(node.id, { cpuCores: v })
                       }
-                      aria-label={`Cluster node ${index + 1} CPU cores`}
+                      aria-label={`Node ${index + 1} CPU cores`}
                     />
                     {showCpuErr ? (
                       <FormHelperText id={cpuHelperId} className="trial-field-helper--error">
@@ -545,7 +547,7 @@ function ClusterWorkloadBlock({
                           ? () => {}
                           : (_e, v) => updateNode(node.id, { memoryGb: v })
                       }
-                      aria-label={`Cluster node ${index + 1} memory in GB`}
+                      aria-label={`Node ${index + 1} memory in GB`}
                     />
                     {showMemErr ? (
                       <FormHelperText id={memHelperId} className="trial-field-helper--error">
@@ -570,7 +572,7 @@ function ClusterWorkloadBlock({
                             ? () => {}
                             : (_e, v) => updateNode(node.id, { storageGb: v })
                         }
-                        aria-label={`Cluster node ${index + 1} storage in GB`}
+                        aria-label={`Node ${index + 1} storage in GB`}
                       />
                       {showStorErr ? (
                         <FormHelperText id={storHelperId} className="trial-field-helper--error">
@@ -1354,7 +1356,7 @@ function WorkloadReadOnlySummary({
             size="md"
             className="trial-configure-summary__subsection-title"
           >
-            Cluster nodes
+            Nodes
             <TrialReviewRequiredMark />
           </Title>
           {clusterRo.clusterWorkloadNodes.map((node, index) => {

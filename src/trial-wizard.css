@@ -1357,7 +1357,7 @@ select.trial-configure-foundation__select.pf-v6-c-form-control::after {
 }
 
 /*
- * Configure / review: h4 section labels (Basic, Platform settings, Cluster nodes, etc.)
+ * Configure / review: h4 section labels (Basic, Platform settings, Nodes, etc.)
  * — compact so they stay clearly under h2/h3 service titles.
  */
 .trial-configure-summary__subsection-title.pf-v6-c-title {
@@ -1635,7 +1635,7 @@ select.trial-configure-foundation__select.pf-v6-c-form-control::after {
   border-top: none;
 }
 
-/* Review cluster nodes: first card follows “Cluster nodes” heading, not :first-child of the rail */
+/* Review cluster: first card follows “Nodes” heading, not :first-child of the rail */
 .trial-configure-summary__subsection-title + .trial-review-summary__host-block {
   padding-top: 0;
   border-top: none;
