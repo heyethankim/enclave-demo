@@ -347,24 +347,6 @@ function ClusterWorkloadBlock({
     });
   };
 
-  const toggleHa = (key: "clusterHaEnabled" | "clusterAutoscaleEnabled", checked: boolean) => {
-    onChange({ ...form, [key]: checked } as FormState);
-  };
-
-  const haRow = (id: string, label: string, key: "clusterHaEnabled" | "clusterAutoscaleEnabled") => (
-    <label key={id} className="trial-workload-checkbox-row" htmlFor={id}>
-      <input
-        id={id}
-        type="checkbox"
-        className="trial-workload-checkbox-row__input"
-        checked={form[key]}
-        disabled={readOnly}
-        onChange={(e) => toggleHa(key, e.target.checked)}
-      />
-      <span className="trial-workload-checkbox-row__label">{label}</span>
-    </label>
-  );
-
   return (
     <section
       className="trial-configure-foundation__subsection"
@@ -605,24 +587,29 @@ function ClusterWorkloadBlock({
       </div>
 
       <p className="trial-configure-foundation__muted-label">
-        High availability
+        Scaling
         <TrialConfigureRequiredMark />
       </p>
       <div
         className="trial-workload-model-checkboxes"
         role="group"
-        aria-label="High availability options"
+        aria-label="Cluster scaling options"
       >
-        {haRow(
-          "trial-cluster-ha",
-          "Enable High Availability (Minimum 3 control plane nodes)",
-          "clusterHaEnabled",
-        )}
-        {haRow(
-          "trial-cluster-autoscale",
-          "Enable auto-scaling (automatically add/remove nodes based on load)",
-          "clusterAutoscaleEnabled",
-        )}
+        <label className="trial-workload-checkbox-row" htmlFor="trial-cluster-autoscale">
+          <input
+            id="trial-cluster-autoscale"
+            type="checkbox"
+            className="trial-workload-checkbox-row__input"
+            checked={form.clusterAutoscaleEnabled}
+            disabled={readOnly}
+            onChange={(e) =>
+              onChange({ ...form, clusterAutoscaleEnabled: e.target.checked })
+            }
+          />
+          <span className="trial-workload-checkbox-row__label">
+            Enable auto-scaling (automatically add/remove nodes based on load)
+          </span>
+        </label>
       </div>
 
       </div>
@@ -929,15 +916,9 @@ function BareMetalWorkloadBlock({
   onChange,
   showSubmitValidationErrors = false,
 }: WorkloadProps) {
-  const ro = readOnly ? ({ readOnlyVariant: "default" as const } satisfies {
-    readOnlyVariant: "default";
-  }) : {};
   const [redfishPasswordVisible, setRedfishPasswordVisible] = useState<
     Record<string, boolean>
   >({});
-  const provMissing = form.provisioningNetwork.trim() === "";
-  const showProvErr = showSubmitValidationErrors && provMissing;
-  const provHelperId = "trial-workload-bm-provnet-helper";
   const updateHost = (hostId: string, patch: Partial<AgentHost>) => {
     onChange({
       ...form,
@@ -968,60 +949,8 @@ function BareMetalWorkloadBlock({
       <div
         className="trial-configure-service-rail-body"
         role="group"
-        aria-labelledby="trial-workload-bm-network-boot-heading"
+        aria-labelledby="trial-workload-bm-heading"
       >
-        <Title
-          id="trial-workload-bm-network-boot-heading"
-          headingLevel="h4"
-          size="md"
-          className="trial-configure-summary__subsection-title"
-        >
-          Network & Boot
-        </Title>
-        <div className="trial-configure-foundation__field-grid">
-        <FormGroup label="Provisioning network" fieldId="trial-workload-bm-provnet" isRequired>
-          <Fragment>
-            <TextInput
-              id="trial-workload-bm-provnet"
-              value={form.provisioningNetwork}
-              isRequired
-              validated={showProvErr ? "error" : "default"}
-              aria-invalid={showProvErr}
-              aria-describedby={showProvErr ? provHelperId : undefined}
-              {...ro}
-              onChange={
-                readOnly
-                  ? () => {}
-                  : (_e, v) => onChange({ ...form, provisioningNetwork: v })
-              }
-              aria-label="Provisioning network"
-            />
-            {showProvErr ? (
-              <FormHelperText id={provHelperId} className="trial-field-helper--error">
-                Enter provisioning network.
-              </FormHelperText>
-            ) : null}
-          </Fragment>
-        </FormGroup>
-        <FormGroup label="Boot mode" fieldId="trial-workload-bm-boot" isRequired>
-          <select
-            id="trial-workload-bm-boot"
-            className="trial-configure-foundation__select pf-v6-c-form-control"
-            value={form.bootMode}
-            disabled={readOnly}
-            aria-label="Boot mode"
-            onChange={
-              readOnly
-                ? undefined
-                : (e) => onChange({ ...form, bootMode: e.target.value })
-            }
-          >
-            <option value="UEFI">UEFI</option>
-            <option value="Legacy BIOS">Legacy BIOS</option>
-          </select>
-        </FormGroup>
-        </div>
-
         <div className="trial-baremetal-workload-hosts-block">
           <div className="trial-configure-summary__vm-agent-hosts-title-row">
             <Title
@@ -1472,15 +1401,10 @@ function WorkloadReadOnlySummary({
             );
           })}
           <p className="trial-configure-foundation__muted-label">
-            High availability
+            Scaling
             <TrialReviewRequiredMark />
           </p>
           <div className="trial-review-summary__rows">
-            {row(
-              "Enable High Availability (Minimum 3 control plane nodes)",
-              yn(clusterRo.clusterHaEnabled),
-              true,
-            )}
             {row(
               "Enable auto-scaling (automatically add/remove nodes based on load)",
               yn(clusterRo.clusterAutoscaleEnabled),
@@ -1631,23 +1555,6 @@ function WorkloadReadOnlySummary({
             </Title>
           </div>
           <div className="trial-configure-service-rail-body">
-          <Title
-            id="trial-workload-bm-network-boot-review-heading"
-            headingLevel="h4"
-            size="md"
-            className="trial-configure-summary__subsection-title"
-          >
-            Network & Boot
-            <TrialReviewRequiredMark />
-          </Title>
-          <div
-            className="trial-review-summary__rows"
-            role="group"
-            aria-labelledby="trial-workload-bm-network-boot-review-heading"
-          >
-            {row("Provisioning network", bmRo.provisioningNetwork || "—", true)}
-            {row("Boot mode", bmRo.bootMode || "—", true)}
-          </div>
           <Title
             id="trial-workload-bm-hosts-review-heading"
             headingLevel="h4"

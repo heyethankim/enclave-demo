@@ -1,6 +1,5 @@
 import { Fragment, useCallback, useState } from "react";
 import {
-  Alert,
   Button,
   FormGroup,
   FormHelperText,
@@ -70,7 +69,7 @@ export type FormState = {
   gpuInstallCudaToolkit: boolean;
   /** Model as a Service — inference runtime identifier */
   modelRuntime: string;
-  /** Cluster as a Service — workload (cluster nodes + HA options) */
+  /** Cluster as a Service — workload (cluster nodes + scaling options) */
   clusterWorkloadNodes: ClusterWorkloadNode[];
   clusterHaEnabled: boolean;
   clusterAutoscaleEnabled: boolean;
@@ -752,12 +751,6 @@ export function validationMessagesForForm(
     }
   }
 
-  if (flavorId === "baremetal") {
-    if (form.provisioningNetwork.trim() === "") {
-      messages.push("Enter provisioning network.");
-    }
-  }
-
   if (flavorId === "models") {
     if (form.modelRuntime.trim() === "") {
       messages.push("Enter model runtime.");
@@ -820,9 +813,6 @@ export function validateConfigureForms(
   if (selected.has("baremetal") && infra !== "baremetal") {
     const bmForm = mergeConfigureForm("baremetal", forms);
     const bmMsgs: string[] = [];
-    if (bmForm.provisioningNetwork.trim() === "") {
-      bmMsgs.push("Enter provisioning network.");
-    }
     bmForm.hosts.forEach((host, index) => {
       bmMsgs.push(...validationAgentHostFields(host, `Host ${index + 1}`));
     });
@@ -1759,16 +1749,6 @@ export function FlavorConfigureFields({
               </Button>
             ) : null}
           </div>
-          <Alert
-            variant="info"
-            isInline
-            className="trial-triad-infra-agent-hosts-alert"
-            title="Manage your infra anytime"
-          >
-            You can add, remove, or modify nodes at any time after deployment through the
-            management interface. This allows you to scale and update your infrastructure without
-            downtime.
-          </Alert>
           <div className="trial-configure-summary__vm-agent-hosts">
             {form.hosts.map((host, index) => {
               const ipFieldId = `${id("host")}-${host.id}-ip`;

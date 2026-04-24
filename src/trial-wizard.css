@@ -973,8 +973,7 @@
   border-inline-start: 1px solid var(--trial-border);
 }
 
-.trial-cluster-workload-day2-alert.pf-v6-c-alert,
-.trial-triad-infra-agent-hosts-alert.pf-v6-c-alert {
+.trial-cluster-workload-day2-alert.pf-v6-c-alert {
   margin-top: 0;
   margin-bottom: var(--pf-t--global--spacer--md);
 }
@@ -1382,14 +1381,14 @@ select.trial-configure-foundation__select.pf-v6-c-form-control::after {
   margin-bottom: var(--pf-t--global--spacer--md);
 }
 
-/* Bare Metal review: space above Agent host after Network & Boot */
+/* Bare Metal review: space above Agent host */
 .trial-bm-review-agent-host-heading.pf-v6-c-title {
   margin-top: var(--pf-t--global--spacer--2xl);
   margin-bottom: var(--pf-t--global--spacer--md);
 }
 
 .trial-baremetal-workload-hosts-block {
-  margin-top: var(--pf-t--global--spacer--xl);
+  margin-top: var(--pf-t--global--spacer--sm);
 }
 
 .trial-configure-summary__vm-agent-hosts-title-row {
@@ -1453,7 +1452,7 @@ select.trial-configure-foundation__select.pf-v6-c-form-control::after {
   gap: 0;
 }
 
-/* Cluster workload: gap after last node card before “High availability” */
+/* Cluster workload: gap after last node card before “Scaling” */
 .trial-configure-summary__vm-agent-hosts + .trial-configure-foundation__muted-label {
   margin-top: var(--pf-t--global--spacer--xl);
 }
@@ -1646,7 +1645,7 @@ select.trial-configure-foundation__select.pf-v6-c-form-control::after {
   margin: 0 0 var(--pf-t--global--spacer--sm);
 }
 
-/* Review — cluster: space above “High availability” after the last node card */
+/* Review — cluster: space above “Scaling” after the last node card */
 .trial-configure-foundation__workload-readonly
   .trial-review-summary__host-block
   + .trial-configure-foundation__muted-label {
