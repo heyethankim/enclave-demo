@@ -38,6 +38,7 @@ import {
   type SecureComplyState,
 } from "./SecureComplyStep";
 import { getWizardBrand } from "./brand";
+import { scrollTrialWizardMainToTop } from "./scrollTrialWizardMain";
 
 type HighlightIconId = "bootstrap" | "disconnected" | "policies";
 
@@ -214,6 +215,10 @@ export default function App() {
 
   const goBack = () => setIndex((i) => Math.max(0, i - 1));
 
+  useEffect(() => {
+    scrollTrialWizardMainToTop();
+  }, [index]);
+
   const goNext = useCallback(() => {
     if (
       step.id === "secure" &&
@@ -306,7 +311,11 @@ export default function App() {
         </div>
       </header>
 
-      <div className="trial-wizard-main" role="main">
+      <div
+        className="trial-wizard-main"
+        id="trial-wizard-scroll-region"
+        role="main"
+      >
         <div className="trial-wizard-inner">
           <Card
             isRounded

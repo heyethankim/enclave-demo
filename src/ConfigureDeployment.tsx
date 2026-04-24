@@ -38,6 +38,7 @@ import type { SecureComplyState } from "./SecureComplyStep";
 import { SecureComplyReadOnlySummary } from "./SecureComplyReadOnlySummary";
 import { AgentHostWorkloadCard } from "./AgentHostWorkloadCard";
 import { publicAssetUrl } from "./publicAssetUrl";
+import { scrollTrialWizardMainToTop } from "./scrollTrialWizardMain";
 
 type Props = {
   selected: ReadonlySet<SovereignFlavorId>;
@@ -1713,6 +1714,11 @@ export function ConfigureDeployment({
     configureEditorStepIndex,
     configureEditorSteps.length,
   ]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    scrollTrialWizardMainToTop();
+  }, [readOnly, configureEditorStepIndex, configureFlowKey]);
 
   const showSecureComplyTab = readOnly && secureComply != null;
 
