@@ -172,96 +172,6 @@ const CLUSTER_NODE_ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: "infra", label: "Infra" },
 ];
 
-type VmOsImageOptionKey =
-  | "vmOsRhel9"
-  | "vmOsRhel8"
-  | "vmOsFedoraCoreos"
-  | "vmOsUbuntu2204"
-  | "vmOsWindows2022"
-  | "vmOsCentosStream9";
-
-const VM_OS_IMAGE_OPTIONS: {
-  id: string;
-  key: VmOsImageOptionKey;
-  label: string;
-  logoSrc: string;
-}[] = [
-  {
-    id: "trial-vm-os-rhel9",
-    key: "vmOsRhel9",
-    label: "Red Hat Enterprise Linux 9",
-    logoSrc: publicAssetUrl("os-logos/redhat-hat.svg"),
-  },
-  {
-    id: "trial-vm-os-rhel8",
-    key: "vmOsRhel8",
-    label: "Red Hat Enterprise Linux 8",
-    logoSrc: publicAssetUrl("os-logos/redhat-hat.svg"),
-  },
-  {
-    id: "trial-vm-os-fcos",
-    key: "vmOsFedoraCoreos",
-    label: "Fedora CoreOS",
-    logoSrc: publicAssetUrl("os-logos/fedora.png"),
-  },
-  {
-    id: "trial-vm-os-ubuntu2204",
-    key: "vmOsUbuntu2204",
-    label: "Ubuntu 22.04 LTS",
-    logoSrc: publicAssetUrl("os-logos/ubuntu.png"),
-  },
-  {
-    id: "trial-vm-os-win2022",
-    key: "vmOsWindows2022",
-    label: "Windows Server 2022",
-    logoSrc: publicAssetUrl("os-logos/windows.png"),
-  },
-  {
-    id: "trial-vm-os-centos9",
-    key: "vmOsCentosStream9",
-    label: "CentOS Stream 9",
-    logoSrc: publicAssetUrl("os-logos/centos-stream.png"),
-  },
-];
-
-type ModelsValidatedCheckboxKey =
-  | "modelIbmGranite"
-  | "modelMetaLlama3"
-  | "modelMistralAi"
-  | "modelMixtral8x7b";
-
-const MODELS_VALIDATED_CHECKBOX_OPTIONS: {
-  id: string;
-  key: ModelsValidatedCheckboxKey;
-  label: string;
-  logoSrc: string;
-}[] = [
-  {
-    id: "trial-model-granite",
-    key: "modelIbmGranite",
-    label: "IBM Granite",
-    logoSrc: publicAssetUrl("model-logos/ibm-granite.png"),
-  },
-  {
-    id: "trial-model-llama",
-    key: "modelMetaLlama3",
-    label: "Meta Llama 3",
-    logoSrc: publicAssetUrl("model-logos/meta-llama.png"),
-  },
-  {
-    id: "trial-model-mistral",
-    key: "modelMistralAi",
-    label: "Mistral AI",
-    logoSrc: publicAssetUrl("model-logos/mistral.png"),
-  },
-  {
-    id: "trial-model-mixtral",
-    key: "modelMixtral8x7b",
-    label: "Mixtral 8x7B",
-    logoSrc: publicAssetUrl("model-logos/mixtral.png"),
-  },
-];
-
 type ModelsGpuCheckboxKey = "gpuInstallNvidiaDrivers" | "gpuInstallCudaToolkit";
 
 const MODELS_GPU_CHECKBOX_OPTIONS: {
@@ -637,23 +547,14 @@ function VmWorkloadBlock({
     form.vmInstanceLarge ||
     form.vmInstanceXLarge ||
     form.vmInstanceGpu;
-  const anyOs =
-    form.vmOsRhel9 ||
-    form.vmOsRhel8 ||
-    form.vmOsFedoraCoreos ||
-    form.vmOsUbuntu2204 ||
-    form.vmOsWindows2022 ||
-    form.vmOsCentosStream9;
   const diskTypeMissing = form.vmDiskProvisioningType.trim() === "";
   const diskSizeMissing = form.vmDefaultDiskSize.trim() === "";
   const netModeMissing = form.vmNetworkMode.trim() === "";
   const showInstanceErr = showSubmitValidationErrors && !anyInstance;
-  const showOsErr = showSubmitValidationErrors && !anyOs;
   const showDiskTypeErr = showSubmitValidationErrors && diskTypeMissing;
   const showDiskSizeErr = showSubmitValidationErrors && diskSizeMissing;
   const showNetModeErr = showSubmitValidationErrors && netModeMissing;
   const instanceHelperId = "trial-workload-vm-instance-types-helper";
-  const osHelperId = "trial-workload-vm-os-images-helper";
   const diskTypeHelperId = "trial-workload-vm-disk-type-helper";
   const diskSizeHelperId = "trial-workload-vm-disk-size-helper";
   const netModeHelperId = "trial-workload-vm-net-mode-helper";
@@ -745,48 +646,6 @@ function VmWorkloadBlock({
           {showInstanceErr ? (
             <FormHelperText id={instanceHelperId} className="trial-field-helper--error">
               Select at least one default instance type.
-            </FormHelperText>
-          ) : null}
-        </div>
-
-        <div className="trial-configure-summary__vm-subsection">
-          <p
-            className="trial-configure-foundation__muted-label"
-            id="trial-workload-vm-os-images-label"
-          >
-            Operating system images
-            <TrialConfigureRequiredMark />
-          </p>
-          <div
-            className="trial-vm-os-images-grid"
-            role="group"
-            aria-labelledby="trial-workload-vm-os-images-label"
-            aria-invalid={showOsErr}
-            aria-describedby={showOsErr ? osHelperId : undefined}
-          >
-            {VM_OS_IMAGE_OPTIONS.map((opt) => {
-              const checked = form[opt.key];
-              return (
-                <label key={opt.id} className="trial-vm-os-image-card" htmlFor={opt.id}>
-                  <input
-                    id={opt.id}
-                    type="checkbox"
-                    className="trial-workload-checkbox-row__input trial-vm-os-image-card__input"
-                    checked={checked}
-                    disabled={readOnly}
-                    onChange={(e) => toggle(opt.key, e.target.checked)}
-                  />
-                  <span className="trial-vm-os-image-card__logo-wrap" aria-hidden>
-                    <img src={opt.logoSrc} alt="" className="trial-vm-os-image-card__logo" />
-                  </span>
-                  <span className="trial-vm-os-image-card__label">{opt.label}</span>
-                </label>
-              );
-            })}
-          </div>
-          {showOsErr ? (
-            <FormHelperText id={osHelperId} className="trial-field-helper--error">
-              Select at least one operating system image.
             </FormHelperText>
           ) : null}
         </div>
@@ -1080,41 +939,6 @@ function ModelsWorkloadBlock({
         <div
           className="trial-workload-models-group"
           role="group"
-          aria-label="Red Hat validated models"
-        >
-        <p
-          className="trial-configure-foundation__muted-label"
-          id="trial-workload-models-validated-label"
-        >
-          Red Hat validated models
-          <TrialConfigureRequiredMark />
-        </p>
-        <div
-          className="trial-vm-os-images-grid"
-          role="group"
-          aria-labelledby="trial-workload-models-validated-label"
-        >
-          {MODELS_VALIDATED_CHECKBOX_OPTIONS.map((opt) => (
-            <label key={opt.id} className="trial-vm-os-image-card" htmlFor={opt.id}>
-              <input
-                id={opt.id}
-                type="checkbox"
-                className="trial-workload-checkbox-row__input trial-vm-os-image-card__input"
-                checked={form[opt.key]}
-                disabled={readOnly}
-                onChange={(e) => toggle(opt.key, e.target.checked)}
-              />
-              <span className="trial-vm-os-image-card__logo-wrap" aria-hidden>
-                <img src={opt.logoSrc} alt="" className="trial-vm-os-image-card__logo" />
-              </span>
-              <span className="trial-vm-os-image-card__label">{opt.label}</span>
-            </label>
-          ))}
-        </div>
-        </div>
-        <div
-          className="trial-workload-models-group"
-          role="group"
           aria-label="GPU acceleration"
         >
         <p
@@ -1229,10 +1053,6 @@ function WorkloadReadOnlySummary({
     }
     return lines;
   })();
-  const vmOsSelectedOptions = VM_OS_IMAGE_OPTIONS.filter((opt) => vmRo[opt.key]);
-  const modelsValidatedSelectedOptions = MODELS_VALIDATED_CHECKBOX_OPTIONS.filter(
-    (opt) => modelsRo[opt.key],
-  );
   const modelsGpuSelectedOptions = MODELS_GPU_CHECKBOX_OPTIONS.filter((opt) => modelsRo[opt.key]);
   return (
     <div className="trial-configure-foundation__workload-readonly">
@@ -1276,52 +1096,6 @@ function WorkloadReadOnlySummary({
                     {vmInstanceLines.map((line) => (
                       <span key={line} className="trial-review-summary__vm-review-type-line">
                         {line}
-                      </span>
-                    ))}
-                  </span>
-                ) : (
-                  "—"
-                )}
-              </span>
-            </Fragment>
-          </div>
-          </div>
-          <div className="trial-configure-summary__vm-subsection">
-          <Title
-            id="trial-workload-vm-os-review-heading"
-            headingLevel="h4"
-            size="md"
-            className="trial-configure-summary__subsection-title"
-          >
-            Operating system images
-            <TrialReviewRequiredMark />
-          </Title>
-          <div
-            className="trial-review-summary__rows"
-            role="group"
-            aria-labelledby="trial-workload-vm-os-review-heading"
-          >
-            <Fragment>
-              <span className="trial-review-summary__label">
-                Enabled images
-                <span className="trial-review-summary__label-required" aria-hidden>
-                  {" "}
-                  *
-                </span>
-              </span>
-              <span className="trial-review-summary__value trial-review-summary__value--vm-review-stack">
-                {vmOsSelectedOptions.length ? (
-                  <span className="trial-review-summary__vm-review-stack-inner">
-                    {vmOsSelectedOptions.map((opt) => (
-                      <span key={opt.id} className="trial-review-summary__vm-review-os-line">
-                        <img
-                          src={opt.logoSrc}
-                          alt=""
-                          className="trial-review-summary__vm-review-os-logo"
-                          width={24}
-                          height={24}
-                        />
-                        <span>{opt.label}</span>
                       </span>
                     ))}
                   </span>
@@ -1473,52 +1247,6 @@ function WorkloadReadOnlySummary({
             Models & GPU Runtime
             <TrialReviewRequiredMark />
           </Title>
-          <div className="trial-workload-models-group">
-            <Title
-              id="trial-workload-models-validated-review-heading"
-              headingLevel="h4"
-              size="md"
-              className="trial-configure-summary__subsection-title"
-            >
-              Red Hat validated models
-              <TrialReviewRequiredMark />
-            </Title>
-            <div
-              className="trial-review-summary__rows"
-              role="group"
-              aria-labelledby="trial-workload-models-validated-review-heading"
-            >
-              <Fragment>
-                <span className="trial-review-summary__label">
-                  Enabled models
-                  <span className="trial-review-summary__label-required" aria-hidden>
-                    {" "}
-                    *
-                  </span>
-                </span>
-                <span className="trial-review-summary__value trial-review-summary__value--vm-review-stack">
-                  {modelsValidatedSelectedOptions.length ? (
-                    <span className="trial-review-summary__vm-review-stack-inner">
-                      {modelsValidatedSelectedOptions.map((opt) => (
-                        <span key={opt.id} className="trial-review-summary__vm-review-os-line">
-                          <img
-                            src={opt.logoSrc}
-                            alt=""
-                            className="trial-review-summary__vm-review-os-logo"
-                            width={24}
-                            height={24}
-                          />
-                          <span>{opt.label}</span>
-                        </span>
-                      ))}
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </span>
-              </Fragment>
-            </div>
-          </div>
           <div className="trial-workload-models-group">
             <Title
               id="trial-workload-models-gpu-accel-review-heading"

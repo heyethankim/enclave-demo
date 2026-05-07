@@ -787,16 +787,6 @@ export function validationMessagesForForm(
     if (!anyInstance) {
       messages.push("Select at least one default instance type.");
     }
-    const anyOs =
-      form.vmOsRhel9 ||
-      form.vmOsRhel8 ||
-      form.vmOsFedoraCoreos ||
-      form.vmOsUbuntu2204 ||
-      form.vmOsWindows2022 ||
-      form.vmOsCentosStream9;
-    if (!anyOs) {
-      messages.push("Select at least one operating system image.");
-    }
     if (form.vmDiskProvisioningType.trim() === "") {
       messages.push("Select disk provisioning type.");
     }
@@ -811,14 +801,6 @@ export function validationMessagesForForm(
   if (flavorId === "models") {
     if (form.modelRuntime.trim() === "") {
       messages.push("Select model runtime.");
-    }
-    const anyModel =
-      form.modelIbmGranite ||
-      form.modelMetaLlama3 ||
-      form.modelMistralAi ||
-      form.modelMixtral8x7b;
-    if (!anyModel) {
-      messages.push("Select at least one Red Hat validated model.");
     }
     const anyGpu = form.gpuInstallNvidiaDrivers || form.gpuInstallCudaToolkit;
     if (!anyGpu) {
