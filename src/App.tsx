@@ -286,6 +286,9 @@ export default function App() {
               decoding="async"
             />
           </div>
+          <div className="trial-conceptual-sticker-badge" role="note">
+            Conceptual design
+          </div>
         </div>
         <div
           className="trial-wizard-top-divider"
